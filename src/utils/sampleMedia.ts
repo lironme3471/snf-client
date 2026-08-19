@@ -1,7 +1,7 @@
-/** Generates a minimal valid PCM WAV (0.5 s silence, 8 kHz, 16-bit signed mono). */
-export function generateWavBlob(): Blob {
+/** Generates a valid PCM WAV (8 kHz, 16-bit signed mono) filled with audible noise. */
+export function generateWavBlob(durationSeconds = 0.5): Blob {
   const sampleRate = 8000;
-  const numSamples = sampleRate / 2; // 0.5 s
+  const numSamples = Math.max(1, Math.round(sampleRate * durationSeconds));
   const dataSize = numSamples * 2;   // 2 bytes per sample (16-bit)
   const buffer = new ArrayBuffer(44 + dataSize);
   const view = new DataView(buffer);
@@ -25,7 +25,13 @@ export function generateWavBlob(): Blob {
   writeU16(34, 16);           // bits per sample (16-bit signed)
   writeStr(36, "data");
   writeU32(40, dataSize);
-  // silence = 0x0000 for signed 16-bit PCM (already zero-initialized)
+
+  let seed = 0x5eed1234;
+  for (let i = 0; i < numSamples; i++) {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    const sample = (((seed >>> 16) & 0xffff) - 32768) * 0.35;
+    view.setInt16(44 + i * 2, sample, true);
+  }
 
   return new Blob([buffer], { type: "audio/wav" });
 }

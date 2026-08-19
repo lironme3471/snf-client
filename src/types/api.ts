@@ -159,3 +159,15 @@ export interface ApiError {
   timestamp?: string;
   jobId?: string;
 }
+
+export interface LoginResponse {
+  bearerToken?: string;
+  token?: string;
+  accessToken?: string;
+  access_token?: string;
+  idToken?: string;
+  id_token?: string;
+  data?: LoginResponse;
+  result?: LoginResponse;
+  [key: string]: unknown;
+}

@@ -14,6 +14,8 @@ export const SAMPLE_AGENT_CONFIG = {
 type AgentConfig = typeof SAMPLE_AGENT_CONFIG;
 type MockInteraction = ManifestFormValues["interactions"][number];
 
+const MOCK_AUDIO_DURATION_SECONDS = 120;
+
 export type MockType = "voice" | "screen" | "chat" | "all";
 
 /** Interaction + a map of mediaId → Blob for auto-upload after job creation. */
@@ -55,7 +57,7 @@ function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
 function times() {
   const now = Date.now();
   return {
-    start: new Date(now - 125 * 1000).toISOString(),    // ~2m 5s ago
+    start: new Date(now - (MOCK_AUDIO_DURATION_SECONDS + 5) * 1000).toISOString(),
     end: new Date(now - 5 * 1000).toISOString(),          // ~5s ago
     wrapUp: new Date(now - 2 * 1000).toISOString(),       // ~2s ago
   };
@@ -63,7 +65,7 @@ function times() {
 
 export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
-  const wav = generateWavBlob();
+  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
   const audioId = `AUDIO-${Date.now()}`;
   const sha = await computeMd5Hex(wav);
   return {
@@ -99,7 +101,7 @@ export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
 
 export async function generateScreenMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
-  const wav = generateWavBlob();
+  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
   const audioId = `AUDIO-${Date.now()}`;
   const sha = await computeMd5Hex(wav);
   return {
@@ -169,7 +171,7 @@ export async function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
 export async function generateAllThreeMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
   const now = Date.now();
-  const wav = generateWavBlob();
+  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
   const audioId = `AUDIO-${now}`;
   const wavSha = await computeMd5Hex(wav);
   return {

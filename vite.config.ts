@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      '/login-api': {
+        target: 'https://na1.test.nice-incontact.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/login-api/, ''),
+      },
       '/nice-api': {
         target: 'https://api-na1.test.niceincontact.com',
         changeOrigin: true,

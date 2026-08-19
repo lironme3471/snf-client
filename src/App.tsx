@@ -23,7 +23,7 @@ import type { CsvParseResult } from "./utils/csvParser";
 type View = "form" | "import" | "dashboard" | "status";
 
 export default function App() {
-  const { token, setToken } = useAuth();
+  const { token, setToken, clearToken } = useAuth();
   const [view, setView] = useState<View>("form");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -58,7 +58,7 @@ export default function App() {
 
   async function handleFormSubmit(values: ManifestFormValues) {
     if (!token) {
-      setSubmitError("Please enter a Bearer token before submitting.");
+      setSubmitError("Please log in before submitting.");
       return;
     }
     setSubmitting(true);
@@ -106,7 +106,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      <Header token={token} onTokenChange={setToken} />
+      <Header token={token} onLoginToken={setToken} onLogout={clearToken} />
 
       <div className="bg-white border-b px-6">
         <nav className="flex gap-1">
@@ -147,7 +147,7 @@ export default function App() {
             )}
             {!token && (
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-3 text-sm">
-                Paste your Bearer token in the header to enable job submission.
+                Log in to enable job submission.
               </div>
             )}
             <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-sm text-blue-800">
@@ -172,7 +172,7 @@ export default function App() {
           <div className="bg-white rounded-lg border p-6 space-y-6">
             {!token && (
               <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded-lg px-4 py-3 text-sm">
-                Paste your Bearer token in the header before submitting.
+                Log in before submitting.
               </div>
             )}
             <CsvImport onParsed={setCsvResult} />
