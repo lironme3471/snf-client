@@ -131,11 +131,15 @@ export function ParticipantForm({ interactionIndex }: Props) {
                   </div>
                   <div>
                     <label className="label">Identifier type</label>
-                    <input
+                    <select
                       {...register(`${pBase}.externalIdentifier.identifierType`)}
                       className="input"
-                      placeholder="e.g. EMAIL"
-                    />
+                    >
+                      <option value="">Select type</option>
+                      <option value="EXTERNAL_IDENTIFIER">EXTERNAL_IDENTIFIER</option>
+                      <option value="AGENT_ID">AGENT_ID</option>
+                      <option value="EXTENSION">EXTENSION</option>
+                    </select>
                   </div>
                   <div>
                     <label className="label">Value</label>

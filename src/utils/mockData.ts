@@ -1,15 +1,14 @@
 import type { ManifestFormValues } from "./validation";
 import {
   generateWavBlob,
-  samplePngBlob,
-  computeSha256Hex,
+  computeMd5Hex,
 } from "./sampleMedia";
 
 // TODO: replace with values pre-configured in your CXone environment
 export const SAMPLE_AGENT_CONFIG = {
-  systemName: "AcmeRecordingSystem",
-  identifierType: "EMAIL",
-  identifierValue: "agent@example.com",
+  systemName: "Generic API System",
+  identifierType: "EXTERNAL_IDENTIFIER",
+  identifierValue: "5525",
 };
 
 type AgentConfig = typeof SAMPLE_AGENT_CONFIG;
@@ -36,7 +35,6 @@ function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
       participantType: "AGENT_USER",
       participantIdentifier: cfg.identifierValue,
       isLeadingAgentUser: true,
-      participantFrom: "",
       participantTo: "+1-555-000-1234",
       externalIdentifier: {
         systemName: cfg.systemName,
@@ -48,9 +46,7 @@ function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
     {
       participantType: "CUSTOMER",
       participantIdentifier: "+1-555-000-5678",
-      isLeadingAgentUser: false,
       participantFrom: "+1-555-000-5678",
-      participantTo: "+1-555-000-1234",
       participantMediaReferences: [],
     },
   ];
@@ -59,9 +55,9 @@ function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
 function times() {
   const now = Date.now();
   return {
-    start: new Date(now - 60 * 60 * 1000).toISOString(),
-    end: new Date(now - 30 * 60 * 1000).toISOString(),
-    wrapUp: new Date(now - 25 * 60 * 1000).toISOString(),
+    start: new Date(now - 125 * 1000).toISOString(),    // ~2m 5s ago
+    end: new Date(now - 5 * 1000).toISOString(),          // ~5s ago
+    wrapUp: new Date(now - 2 * 1000).toISOString(),       // ~2s ago
   };
 }
 
@@ -69,7 +65,7 @@ export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
   const wav = generateWavBlob();
   const audioId = `AUDIO-${Date.now()}`;
-  const sha = await computeSha256Hex(wav);
+  const sha = await computeMd5Hex(wav);
   return {
     interaction: {
       externalInteractionId: `INT-VOICE-${Date.now()}`,
@@ -82,7 +78,9 @@ export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
       subject: "Voice support call",
       hasMultipleInteractions: false,
       isFirstInteraction: true,
-      participants: baseParticipants(cfg),
+      participants: baseParticipants(cfg).map((p, i) =>
+        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
+      ),
       media: [
         {
           mediaId: audioId,
@@ -90,11 +88,10 @@ export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
           startTime: t.start,
           endTime: t.end,
           fileName: "sample-recording.wav",
-          fileType: "audio/wav",
-          checksum: { algorithm: "SHA-256", value: sha },
+          fileType: "WAV",
+          checksum: { algorithm: "MD5", value: sha },
         },
       ],
-      businessData: [{ key: "customField1", value: "voice-value" }],
     },
     mediaBlobs: new Map([[audioId, wav]]),
   };
@@ -102,9 +99,9 @@ export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
 
 export async function generateScreenMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
-  const png = samplePngBlob();
-  const screenId = `SCREEN-${Date.now()}`;
-  const sha = await computeSha256Hex(png);
+  const wav = generateWavBlob();
+  const audioId = `AUDIO-${Date.now()}`;
+  const sha = await computeMd5Hex(wav);
   return {
     interaction: {
       externalInteractionId: `INT-SCREEN-${Date.now()}`,
@@ -118,21 +115,22 @@ export async function generateScreenMock(cfg: AgentConfig): Promise<MockResult> 
       subject: "Screen-recorded support call",
       hasMultipleInteractions: false,
       isFirstInteraction: true,
-      participants: baseParticipants(cfg),
+      participants: baseParticipants(cfg).map((p, i) =>
+        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
+      ),
       media: [
         {
-          mediaId: screenId,
-          mediaType: "SCREEN",
+          mediaId: audioId,
+          mediaType: "AUDIO",
           startTime: t.start,
           endTime: t.end,
-          fileName: "sample-screen.png",
-          fileType: "image/png",
-          checksum: { algorithm: "SHA-256", value: sha },
+          fileName: "sample-recording.wav",
+          fileType: "WAV",
+          checksum: { algorithm: "MD5", value: sha },
         },
       ],
-      businessData: [{ key: "customField1", value: "screen-value" }],
     },
-    mediaBlobs: new Map([[screenId, png]]),
+    mediaBlobs: new Map([[audioId, wav]]),
   };
 }
 
@@ -151,7 +149,9 @@ export async function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
       subject: "Live chat session",
       hasMultipleInteractions: false,
       isFirstInteraction: true,
-      participants: baseParticipants(cfg),
+      participants: baseParticipants(cfg).map((p, i) =>
+        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: textId }] } : p
+      ),
       media: [
         {
           mediaId: textId,
@@ -161,7 +161,6 @@ export async function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
           content: "Agent: Hello, how can I help you?\nCustomer: I need help with my order.",
         },
       ],
-      businessData: [{ key: "customField1", value: "chat-value" }],
     },
     mediaBlobs: new Map(), // TEXT media is inline — no upload needed
   };
@@ -171,14 +170,8 @@ export async function generateAllThreeMock(cfg: AgentConfig): Promise<MockResult
   const t = times();
   const now = Date.now();
   const wav = generateWavBlob();
-  const png = samplePngBlob();
   const audioId = `AUDIO-${now}`;
-  const screenId = `SCREEN-${now}`;
-  const textId = `TEXT-${now}`;
-  const [wavSha, pngSha] = await Promise.all([
-    computeSha256Hex(wav),
-    computeSha256Hex(png),
-  ]);
+  const wavSha = await computeMd5Hex(wav);
   return {
     interaction: {
       externalInteractionId: `INT-ALL-${now}`,
@@ -189,10 +182,12 @@ export async function generateAllThreeMock(cfg: AgentConfig): Promise<MockResult
       wrapUpTime: t.wrapUp,
       externalContactId: `CONTACT-${now}`,
       externalContactStartTime: t.start,
-      subject: "Voice + screen + chat interaction",
+      subject: "Combined interaction",
       hasMultipleInteractions: false,
       isFirstInteraction: true,
-      participants: baseParticipants(cfg),
+      participants: baseParticipants(cfg).map((p, i) =>
+        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
+      ),
       media: [
         {
           mediaId: audioId,
@@ -200,29 +195,12 @@ export async function generateAllThreeMock(cfg: AgentConfig): Promise<MockResult
           startTime: t.start,
           endTime: t.end,
           fileName: "sample-recording.wav",
-          fileType: "audio/wav",
-          checksum: { algorithm: "SHA-256", value: wavSha },
-        },
-        {
-          mediaId: screenId,
-          mediaType: "SCREEN",
-          startTime: t.start,
-          endTime: t.end,
-          fileName: "sample-screen.png",
-          fileType: "image/png",
-          checksum: { algorithm: "SHA-256", value: pngSha },
-        },
-        {
-          mediaId: textId,
-          mediaType: "TEXT",
-          startTime: t.start,
-          endTime: t.end,
-          content: "Agent: Hello, how can I help you?\nCustomer: I need help with my order.",
+          fileType: "WAV",
+          checksum: { algorithm: "MD5", value: wavSha },
         },
       ],
-      businessData: [{ key: "customField1", value: "all-value" }],
     },
-    mediaBlobs: new Map([[audioId, wav], [screenId, png]]),
+    mediaBlobs: new Map([[audioId, wav]]),
   };
 }
 

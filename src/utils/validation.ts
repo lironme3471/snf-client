@@ -64,13 +64,19 @@ export const participantSchema = z
     participantFrom: z.string().optional(),
     participantTo: z.string().optional(),
     participantIdentifier: z.string().min(1, "Required"),
-    isLeadingAgentUser: z.boolean(),
+    isLeadingAgentUser: z.boolean().optional(),
     externalIdentifier: externalIdentifierSchema.optional(),
     participantMediaReferences: z.array(participantMediaRefSchema),
   })
   .superRefine((val, ctx) => {
     if (val.participantType === "AGENT_USER" && !val.externalIdentifier) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "External identifier required for AGENT_USER", path: ["externalIdentifier"] });
+    }
+    if (val.participantFrom && val.participantTo) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Provide only one: participantFrom or participantTo", path: ["participantFrom"] });
+    }
+    if (val.participantType !== "AGENT_USER" && val.isLeadingAgentUser) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "isLeadingAgentUser only allowed for AGENT_USER", path: ["isLeadingAgentUser"] });
     }
   });
 

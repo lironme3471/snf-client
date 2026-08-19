@@ -107,6 +107,13 @@ async function uploadWithProgress(
   url: MediaUploadUrl,
   onProgress: (pct: number) => void
 ): Promise<void> {
+  // Rewrite S3 URLs to use local proxy to avoid CORS issues in development
+  let uploadUrl = url.uploadUrl;
+  if (uploadUrl.includes('.s3.')) {
+    const s3Url = new URL(uploadUrl);
+    uploadUrl = `/s3-proxy${s3Url.pathname}${s3Url.search}`;
+  }
+
   await new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.upload.addEventListener("progress", (e) => {
@@ -117,7 +124,7 @@ async function uploadWithProgress(
       else reject(new Error(`Upload failed: HTTP ${xhr.status}`));
     });
     xhr.addEventListener("error", () => reject(new Error("Network error")));
-    xhr.open(url.httpMethod, url.uploadUrl);
+    xhr.open(url.httpMethod, uploadUrl);
     if (url.headers) {
       Object.entries(url.headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     }

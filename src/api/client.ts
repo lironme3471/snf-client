@@ -1,7 +1,7 @@
 import type { ApiError } from "../types/api";
 
 export const BASE_URL =
-  "https://api-na1.test.nice-incontact.com/api/store-and-forward/v1";
+  `${import.meta.env.DEV ? "/nice-api" : "https://api-na1.test.niceincontact.com"}/api/store-and-forward/v1`;
 
 export class ApiResponseError extends Error {
   constructor(

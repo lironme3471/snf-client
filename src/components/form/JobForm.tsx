@@ -302,6 +302,7 @@ export function JobForm({
   const [mockType, setMockType] = useState<MockType>("all");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [mockFieldIds, setMockFieldIds] = useState<Set<string>>(new Set());
   const dropdownRef = useRef<HTMLDivElement>(null);
   const lastInteractionRef = useRef<HTMLDivElement | null>(null);
@@ -361,8 +362,23 @@ export function JobForm({
     });
   }
 
+  function handleInvalidSubmit() {
+    setValidationMessage("Please fix the highlighted fields before submitting.");
+  }
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      onSubmit={handleSubmit((values) => {
+        setValidationMessage(null);
+        onSubmit(values);
+      }, handleInvalidSubmit)}
+      className="space-y-6"
+    >
+      {validationMessage && (
+        <p className="err" role="alert">
+          {validationMessage}
+        </p>
+      )}
       {dialogOpen && (
         <MockConfigDialog
           onConfirm={handleMockConfirm}

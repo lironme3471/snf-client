@@ -43,7 +43,7 @@ export interface Participant {
   participantFrom?: string;
   participantTo?: string;
   participantIdentifier: string;
-  isLeadingAgentUser: boolean;
+  isLeadingAgentUser?: boolean;
   externalIdentifier?: ExternalIdentifier;
   participantMediaReferences: ParticipantMediaReference[];
 }

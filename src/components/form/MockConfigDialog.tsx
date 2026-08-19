@@ -8,6 +8,7 @@ export interface AgentConfig {
 }
 
 const STORAGE_KEY = "snf_mock_agent_config";
+const VALID_IDENTIFIER_TYPES = ["EXTERNAL_IDENTIFIER", "AGENT_ID", "EXTENSION"];
 
 function loadSaved(): AgentConfig {
   try {
@@ -27,7 +28,9 @@ export function MockConfigDialog({ onConfirm, onCancel }: Props) {
     const saved = loadSaved();
     return {
       systemName: saved.systemName || SAMPLE_AGENT_CONFIG.systemName,
-      identifierType: saved.identifierType || SAMPLE_AGENT_CONFIG.identifierType,
+      identifierType: VALID_IDENTIFIER_TYPES.includes(saved.identifierType)
+        ? saved.identifierType
+        : SAMPLE_AGENT_CONFIG.identifierType,
       identifierValue: saved.identifierValue || SAMPLE_AGENT_CONFIG.identifierValue,
     };
   });
@@ -93,13 +96,17 @@ export function MockConfigDialog({ onConfirm, onCancel }: Props) {
             <label className="label" htmlFor="mock-id-type">
               Identifier type
             </label>
-            <input
+            <select
               id="mock-id-type"
               className="input"
-              placeholder="e.g. EMAIL"
               value={config.identifierType}
               onChange={(e) => set("identifierType", e.target.value)}
-            />
+            >
+              <option value="">Select type</option>
+              <option value="EXTERNAL_IDENTIFIER">EXTERNAL_IDENTIFIER</option>
+              <option value="AGENT_ID">AGENT_ID</option>
+              <option value="EXTENSION">EXTENSION</option>
+            </select>
             {errors.identifierType && <p className="err">{errors.identifierType}</p>}
           </div>
 
