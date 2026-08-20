@@ -1,6 +1,5 @@
 import type { ManifestFormValues } from "./validation";
 import {
-  generateWavBlob,
   computeMd5Hex,
 } from "./sampleMedia";
 
@@ -13,10 +12,11 @@ export const SAMPLE_AGENT_CONFIG = {
 
 type AgentConfig = typeof SAMPLE_AGENT_CONFIG;
 type MockInteraction = ManifestFormValues["interactions"][number];
+type MockMedia = MockInteraction["media"][number];
 
 const MOCK_AUDIO_DURATION_SECONDS = 120;
 
-export type MockType = "voice" | "screen" | "chat" | "all";
+export type MockType = "voice" | "voiceScreen";
 
 /** Interaction + a map of mediaId → Blob for auto-upload after job creation. */
 export interface MockResult {
@@ -25,10 +25,8 @@ export interface MockResult {
 }
 
 export const MOCK_LABELS: Record<MockType, string> = {
-  voice: "Voice (PHONE_CALL + AUDIO)",
-  screen: "Screen (PHONE_CALL + SCREEN)",
-  chat: "Chat (CHAT + TEXT)",
-  all: "Voice + Screen + Chat",
+  voice: "Voice only",
+  voiceScreen: "Voice + Screen",
 };
 
 function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
@@ -63,152 +61,97 @@ function times() {
   };
 }
 
-export async function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
-  const t = times();
-  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
-  const audioId = `AUDIO-${Date.now()}`;
-  const sha = await computeMd5Hex(wav);
-  return {
-    interaction: {
-      externalInteractionId: `INT-VOICE-${Date.now()}`,
-      channelType: "PHONE_CALL",
-      direction: "INBOUND",
-      startTime: t.start,
-      endTime: t.end,
-      externalContactId: `CONTACT-${Date.now()}`,
-      externalContactStartTime: t.start,
-      subject: "Voice support call",
-      hasMultipleInteractions: false,
-      isFirstInteraction: true,
-      participants: baseParticipants(cfg).map((p, i) =>
-        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
-      ),
-      media: [
-        {
-          mediaId: audioId,
-          mediaType: "AUDIO",
-          startTime: t.start,
-          endTime: t.end,
-          fileName: "sample-recording.wav",
-          fileType: "WAV",
-          checksum: { algorithm: "MD5", value: sha },
-        },
-      ],
-    },
-    mediaBlobs: new Map([[audioId, wav]]),
-  };
+async function loadScreenSample(): Promise<Blob> {
+  const response = await fetch(`${import.meta.env.BASE_URL}sample-screen.mp4`);
+  if (!response.ok) throw new Error("Unable to load the sample screen recording.");
+  return response.blob();
 }
 
-export async function generateScreenMock(cfg: AgentConfig): Promise<MockResult> {
-  const t = times();
-  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
-  const audioId = `AUDIO-${Date.now()}`;
-  const sha = await computeMd5Hex(wav);
-  return {
-    interaction: {
-      externalInteractionId: `INT-SCREEN-${Date.now()}`,
-      channelType: "PHONE_CALL",
-      direction: "INBOUND",
-      startTime: t.start,
-      endTime: t.end,
-      wrapUpTime: t.wrapUp,
-      externalContactId: `CONTACT-${Date.now()}`,
-      externalContactStartTime: t.start,
-      subject: "Screen-recorded support call",
-      hasMultipleInteractions: false,
-      isFirstInteraction: true,
-      participants: baseParticipants(cfg).map((p, i) =>
-        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
-      ),
-      media: [
-        {
-          mediaId: audioId,
-          mediaType: "AUDIO",
-          startTime: t.start,
-          endTime: t.end,
-          fileName: "sample-recording.wav",
-          fileType: "WAV",
-          checksum: { algorithm: "MD5", value: sha },
-        },
-      ],
-    },
-    mediaBlobs: new Map([[audioId, wav]]),
-  };
+async function loadVoiceSample(): Promise<Blob> {
+  const response = await fetch(`${import.meta.env.BASE_URL}sample-conversation.wav`);
+  if (!response.ok) throw new Error("Unable to load the sample voice recording.");
+  return response.blob();
 }
 
-export async function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
-  const t = times();
-  const textId = `TEXT-${Date.now()}`;
-  return {
-    interaction: {
-      externalInteractionId: `INT-CHAT-${Date.now()}`,
-      channelType: "CHAT",
-      direction: "INBOUND",
-      startTime: t.start,
-      endTime: t.end,
-      externalContactId: `CONTACT-${Date.now()}`,
-      externalContactStartTime: t.start,
-      subject: "Live chat session",
-      hasMultipleInteractions: false,
-      isFirstInteraction: true,
-      participants: baseParticipants(cfg).map((p, i) =>
-        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: textId }] } : p
-      ),
-      media: [
-        {
-          mediaId: textId,
-          mediaType: "TEXT",
-          startTime: t.start,
-          endTime: t.end,
-          content: "Agent: Hello, how can I help you?\nCustomer: I need help with my order.",
-        },
-      ],
-    },
-    mediaBlobs: new Map(), // TEXT media is inline — no upload needed
-  };
-}
-
-export async function generateAllThreeMock(cfg: AgentConfig): Promise<MockResult> {
+async function generatePhoneMock(
+  cfg: AgentConfig,
+  includeScreen: boolean
+): Promise<MockResult> {
   const t = times();
   const now = Date.now();
-  const wav = generateWavBlob(MOCK_AUDIO_DURATION_SECONDS);
+  const wav = await loadVoiceSample();
   const audioId = `AUDIO-${now}`;
-  const wavSha = await computeMd5Hex(wav);
+  const screenId = includeScreen ? `SCREEN-${now}` : undefined;
+  const screenBlob = includeScreen ? await loadScreenSample() : undefined;
+  const [audioChecksum, screenChecksum] = await Promise.all([
+    computeMd5Hex(wav),
+    screenBlob ? computeMd5Hex(screenBlob) : Promise.resolve(undefined),
+  ]);
+  const media: MockMedia[] = [
+    {
+      mediaId: audioId,
+      mediaType: "AUDIO",
+      startTime: t.start,
+      endTime: t.end,
+      fileName: "sample-conversation.wav",
+      fileType: "WAV",
+      checksum: { algorithm: "MD5", value: audioChecksum },
+    },
+  ];
+
+  if (screenId && screenBlob && screenChecksum) {
+    media.push({
+      mediaId: screenId,
+      mediaType: "SCREEN",
+      startTime: t.start,
+      endTime: t.end,
+      fileName: "sample-screen.mp4",
+      fileType: "MP4",
+      checksum: { algorithm: "MD5", value: screenChecksum },
+    });
+  }
+
   return {
     interaction: {
-      externalInteractionId: `INT-ALL-${now}`,
+      externalInteractionId: `INT-${includeScreen ? "VOICE-SCREEN" : "VOICE"}-${now}`,
       channelType: "PHONE_CALL",
       direction: "INBOUND",
       startTime: t.start,
       endTime: t.end,
-      wrapUpTime: t.wrapUp,
-      externalContactId: `CONTACT-${now}`,
+      externalContactId: `CONTACT-${Date.now()}`,
       externalContactStartTime: t.start,
-      subject: "Combined interaction",
+      subject: includeScreen ? "Voice and screen support call" : "Voice support call",
       hasMultipleInteractions: false,
       isFirstInteraction: true,
       participants: baseParticipants(cfg).map((p, i) =>
-        i === 0 ? { ...p, participantMediaReferences: [{ mediaId: audioId, streamId: 1 }] } : p
+        i === 0
+          ? {
+              ...p,
+              participantMediaReferences: [
+                { mediaId: audioId, streamId: 1 },
+                ...(screenId ? [{ mediaId: screenId, streamId: 0 }] : []),
+              ],
+            }
+          : p
       ),
-      media: [
-        {
-          mediaId: audioId,
-          mediaType: "AUDIO",
-          startTime: t.start,
-          endTime: t.end,
-          fileName: "sample-recording.wav",
-          fileType: "WAV",
-          checksum: { algorithm: "MD5", value: wavSha },
-        },
-      ],
+      media,
     },
-    mediaBlobs: new Map([[audioId, wav]]),
+    mediaBlobs: new Map([
+      [audioId, wav],
+      ...(screenId && screenBlob ? [[screenId, screenBlob] as const] : []),
+    ]),
   };
+}
+
+export function generateVoiceMock(cfg: AgentConfig): Promise<MockResult> {
+  return generatePhoneMock(cfg, false);
+}
+
+export function generateVoiceScreenMock(cfg: AgentConfig): Promise<MockResult> {
+  return generatePhoneMock(cfg, true);
 }
 
 export const MOCK_GENERATORS: Record<MockType, (cfg: AgentConfig) => Promise<MockResult>> = {
   voice: generateVoiceMock,
-  screen: generateScreenMock,
-  chat: generateChatMock,
-  all: generateAllThreeMock,
+  voiceScreen: generateVoiceScreenMock,
 };

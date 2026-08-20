@@ -299,7 +299,7 @@ export function JobForm({
     name: "interactions",
   });
 
-  const [mockType, setMockType] = useState<MockType>("all");
+  const [mockType, setMockType] = useState<MockType>("voice");
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
@@ -430,7 +430,7 @@ export function JobForm({
                 disabled={fields.length >= 400}
                 className="text-sm border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded-l disabled:opacity-50"
               >
-                Try it — {MOCK_LABELS[mockType].split(" (")[0]}
+                Try it - {MOCK_LABELS[mockType]}
               </button>
               <button
                 type="button"
@@ -467,6 +467,11 @@ export function JobForm({
               + Add interaction
             </button>
           </div>
+          <p className="text-xs text-slate-500">
+            {mockType === "voice"
+              ? "Injects a sample voice recording."
+              : "Injects sample voice and matching screen recordings."}
+          </p>
         </div>
 
         {typeof errors.interactions?.message === "string" && (
@@ -494,7 +499,7 @@ export function JobForm({
           <div className="text-center py-8 text-slate-400 border-2 border-dashed rounded-lg space-y-2">
             <p>No interactions yet.</p>
             <p className="text-xs">
-              Click <span className="font-medium text-slate-600">Try it</span> to load a sample (Voice, Screen, Chat, or all three), or{" "}
+              Click <span className="font-medium text-slate-600">Try it</span> to add a sample voice interaction, or{" "}
               <span className="font-medium text-slate-600">+ Add interaction</span> to start from scratch.
             </p>
           </div>

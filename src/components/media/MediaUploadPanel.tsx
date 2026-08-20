@@ -74,12 +74,20 @@ function MediaUploadRow({ url, autoBlob }: { url: MediaUploadUrl; autoBlob?: Blo
         />
         <button
           type="button"
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (state.status === "error" && autoBlob) {
+              handleBlob(autoBlob);
+              return;
+            }
+            inputRef.current?.click();
+          }}
           disabled={state.status === "uploading" || state.status === "done"}
           className="text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-1.5 rounded"
         >
           {state.status === "done"
             ? "Uploaded ✓"
+            : state.status === "error" && autoBlob
+            ? "Retry sample upload"
             : autoBlob
             ? "Auto-uploading sample…"
             : "Choose file & upload"}
@@ -109,19 +117,42 @@ async function uploadWithProgress(
 ): Promise<void> {
   // Rewrite S3 URLs to use local proxy to avoid CORS issues in development
   let uploadUrl = url.uploadUrl;
-  if (uploadUrl.includes('.s3.')) {
+  if (import.meta.env.DEV && uploadUrl.includes('.s3.')) {
     const s3Url = new URL(uploadUrl);
     uploadUrl = `/s3-proxy${s3Url.pathname}${s3Url.search}`;
   }
 
-  await new Promise<void>((resolve, reject) => {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await uploadAttempt(file, url, uploadUrl, onProgress);
+      return;
+    } catch (err) {
+      const status = err instanceof UploadError ? err.status : undefined;
+      if (attempt === 2 || !status || status < 500) throw err;
+    }
+  }
+}
+
+class UploadError extends Error {
+  constructor(public readonly status: number) {
+    super(`Upload failed: HTTP ${status}`);
+  }
+}
+
+function uploadAttempt(
+  file: Blob,
+  url: MediaUploadUrl,
+  uploadUrl: string,
+  onProgress: (pct: number) => void
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.upload.addEventListener("progress", (e) => {
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     });
     xhr.addEventListener("load", () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new Error(`Upload failed: HTTP ${xhr.status}`));
+      else reject(new UploadError(xhr.status));
     });
     xhr.addEventListener("error", () => reject(new Error("Network error")));
     xhr.open(url.httpMethod, uploadUrl);

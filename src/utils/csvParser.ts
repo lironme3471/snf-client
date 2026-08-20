@@ -238,6 +238,36 @@ export function parseCsvToInteractions(text: string): CsvParseResult {
 const EXAMPLE_START = new Date(Date.now() - 60 * 60 * 1000).toISOString();
 const EXAMPLE_END = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
+function buildCsvTestRow(): string[] {
+  const id = Date.now();
+  return [
+    `CSV-TEST-${id}`,
+    "PHONE_CALL",
+    "INBOUND",
+    EXAMPLE_START,
+    EXAMPLE_END,
+    `CSV-CONTACT-${id}`,
+    EXAMPLE_START,
+    "CSV import test",
+    "5525",
+    "Generic API System",
+    "EXTERNAL_IDENTIFIER",
+    "5525",
+    "",
+    "",
+    "",
+    `CSV-TEXT-${id}`,
+    "TEXT",
+    "",
+    "",
+    "",
+    "",
+    "",
+    "Hello from the CSV import.",
+    "",
+  ];
+}
+
 export function generateCsvTemplate(): string {
   const headers = [
     "externalInteractionId",
@@ -266,32 +296,5 @@ export function generateCsvTemplate(): string {
     "bd_customField1",
   ];
 
-  const example = [
-    "INT-001",
-    "PHONE_CALL",
-    "INBOUND",
-    EXAMPLE_START,
-    EXAMPLE_END,
-    "CONTACT-001",
-    EXAMPLE_START,
-    "Support call",
-    "agent@company.com",
-    "AcmeRecordingSystem",
-    "EMAIL",
-    "agent@company.com",
-    "+1-555-000-0000",
-    "+1-555-000-0000",
-    "",
-    "MEDIA-001",
-    "AUDIO",
-    EXAMPLE_START,
-    EXAMPLE_END,
-    "recording.wav",
-    "MD5",
-    "d41d8cd98f00b204e9800998ecf8427e",
-    "",
-    "custom-value-1",
-  ];
-
-  return [headers.join(","), example.join(",")].join("\r\n");
+  return [headers.join(","), buildCsvTestRow().join(",")].join("\r\n");
 }
