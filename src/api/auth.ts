@@ -1,9 +1,8 @@
 import { ApiResponseError } from "./client";
 import type { ApiError, LoginResponse } from "../types/api";
+import { buildLoginUrl } from "./proxy";
 
-const LOGIN_URL = `${
-  import.meta.env.DEV ? "/login-api" : "https://na1.test.nice-incontact.com"
-}/public/user/login`;
+const LOGIN_URL = buildLoginUrl();
 
 export async function login(email: string, password: string): Promise<string> {
   const res = await fetch(LOGIN_URL, {

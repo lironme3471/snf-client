@@ -1,5 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import type { MediaUploadUrl } from "../../types/api";
+import {
+  buildUploadProxyUrl,
+  HAS_PROXY,
+  isS3LikeUrl,
+} from "../../api/proxy";
 
 interface UploadState {
   status: "idle" | "uploading" | "done" | "error";
@@ -145,14 +150,21 @@ async function uploadWithProgress(
 ): Promise<void> {
   // Rewrite S3 URLs to use local proxy to avoid CORS issues in development
   let uploadUrl = url.uploadUrl;
-  if (import.meta.env.DEV && uploadUrl.includes('.s3.')) {
+  let requestHeaders: Record<string, string> = { ...(url.headers ?? {}) };
+
+  if (import.meta.env.DEV && isS3LikeUrl(uploadUrl)) {
     const s3Url = new URL(uploadUrl);
     uploadUrl = `/s3-proxy${s3Url.pathname}${s3Url.search}`;
   }
 
+  if (!import.meta.env.DEV && HAS_PROXY && isS3LikeUrl(uploadUrl)) {
+    uploadUrl = buildUploadProxyUrl(uploadUrl, url.httpMethod, requestHeaders);
+    requestHeaders = {};
+  }
+
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      await uploadAttempt(file, url, uploadUrl, onProgress);
+      await uploadAttempt(file, url.httpMethod, uploadUrl, requestHeaders, onProgress);
       return;
     } catch (err) {
       const status = err instanceof UploadError ? err.status : undefined;
@@ -169,8 +181,9 @@ class UploadError extends Error {
 
 function uploadAttempt(
   file: Blob,
-  url: MediaUploadUrl,
+  method: string,
   uploadUrl: string,
+  headers: Record<string, string>,
   onProgress: (pct: number) => void
 ): Promise<void> {
   return new Promise<void>((resolve, reject) => {
@@ -190,23 +203,18 @@ function uploadAttempt(
       reject(new UploadError(xhr.status));
     });
     xhr.addEventListener("error", () => reject(new Error(describeUploadNetworkError(uploadUrl))));
-    xhr.open(url.httpMethod, uploadUrl);
-    if (url.headers) {
-      Object.entries(url.headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
-    }
+    xhr.open(method, uploadUrl);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     xhr.send(file);
   });
 }
 
 function describeUploadNetworkError(uploadUrl: string): string {
-  try {
-    const host = new URL(uploadUrl).host.toLowerCase();
-    const isS3Host = host.includes(".s3.") || host.endsWith("amazonaws.com");
-    if (!import.meta.env.DEV && isS3Host) {
-      return "Media upload blocked by CORS in hosted mode. Use localhost for uploads.";
+  if (!import.meta.env.DEV && isS3LikeUrl(uploadUrl)) {
+    if (!HAS_PROXY) {
+      return "Media upload blocked by CORS in hosted mode. Configure VITE_PROXY_BASE or use localhost.";
     }
-  } catch {
-    // Fall back to a generic message when URL parsing fails.
+    return "Upload through proxy failed. Check proxy logs and retry.";
   }
   return "Network error";
 }
