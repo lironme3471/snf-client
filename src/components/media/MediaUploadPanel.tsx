@@ -151,16 +151,36 @@ function uploadAttempt(
       if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
     });
     xhr.addEventListener("load", () => {
-      if (xhr.status >= 200 && xhr.status < 300) resolve();
-      else reject(new UploadError(xhr.status));
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve();
+        return;
+      }
+      if (xhr.status === 0) {
+        reject(new Error(describeUploadNetworkError(uploadUrl)));
+        return;
+      }
+      reject(new UploadError(xhr.status));
     });
-    xhr.addEventListener("error", () => reject(new Error("Network error")));
+    xhr.addEventListener("error", () => reject(new Error(describeUploadNetworkError(uploadUrl))));
     xhr.open(url.httpMethod, uploadUrl);
     if (url.headers) {
       Object.entries(url.headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
     }
     xhr.send(file);
   });
+}
+
+function describeUploadNetworkError(uploadUrl: string): string {
+  try {
+    const host = new URL(uploadUrl).host.toLowerCase();
+    const isS3Host = host.includes(".s3.") || host.endsWith("amazonaws.com");
+    if (!import.meta.env.DEV && isS3Host) {
+      return "Media upload blocked by CORS in hosted mode. Use localhost for uploads.";
+    }
+  } catch {
+    // Fall back to a generic message when URL parsing fails.
+  }
+  return "Network error";
 }
 
 interface Props {
