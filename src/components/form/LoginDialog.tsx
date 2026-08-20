@@ -15,18 +15,23 @@ interface LoginFields {
   password: string;
 }
 
+type LoginMode = "credentials" | "token";
+
 export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
+  const [mode, setMode] = useState<LoginMode>("credentials");
   const [fields, setFields] = useState<LoginFields>({
     email: DEFAULT_EMAIL,
     password: "",
   });
+  const [tokenInput, setTokenInput] = useState("");
   const [errors, setErrors] = useState<Partial<LoginFields>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    document.getElementById("login-password")?.focus();
-  }, []);
+    const focusId = mode === "credentials" ? "login-password" : "login-token";
+    document.getElementById(focusId)?.focus();
+  }, [mode]);
 
   function validate(): boolean {
     const nextErrors: Partial<LoginFields> = {};
@@ -38,6 +43,16 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (mode === "token") {
+      const normalized = normalizeToken(tokenInput);
+      if (!normalized) {
+        setSubmitError("Paste a valid bearer token.");
+        return;
+      }
+      onLogin(normalized);
+      return;
+    }
+
     if (!validate()) return;
 
     setSubmitting(true);
@@ -49,7 +64,13 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
       if (err instanceof ApiResponseError) {
         setSubmitError(err.body.message ?? `Login failed with HTTP ${err.status}`);
       } else {
-        setSubmitError(err instanceof Error ? err.message : "Login failed");
+        setSubmitError(
+          err instanceof Error && err.message === "Failed to fetch"
+            ? "Network/CORS error from hosted mode. Use the Paste Token option, or run locally."
+            : err instanceof Error
+            ? err.message
+            : "Login failed"
+        );
       }
     } finally {
       setSubmitting(false);
@@ -59,6 +80,11 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
   function set(field: keyof LoginFields, value: string) {
     setFields((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
+    setSubmitError(null);
+  }
+
+  function switchMode(next: LoginMode) {
+    setMode(next);
     setSubmitError(null);
   }
 
@@ -73,6 +99,30 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
           <p className="text-xs text-slate-500 mt-1">
             Use your test environment credentials to get a session Bearer token.
           </p>
+          <div className="mt-3 inline-flex rounded-md border border-slate-200 p-1 bg-slate-50">
+            <button
+              type="button"
+              onClick={() => switchMode("credentials")}
+              className={`px-3 py-1.5 text-xs font-medium rounded ${
+                mode === "credentials"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Credentials
+            </button>
+            <button
+              type="button"
+              onClick={() => switchMode("token")}
+              className={`px-3 py-1.5 text-xs font-medium rounded ${
+                mode === "token"
+                  ? "bg-white text-slate-800 shadow-sm"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Paste Token
+            </button>
+          </div>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -82,35 +132,59 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
             </div>
           )}
 
-          <div>
-            <label className="label" htmlFor="login-email">
-              Email
-            </label>
-            <input
-              id="login-email"
-              type="email"
-              className="input"
-              value={fields.email}
-              onChange={(event) => set("email", event.target.value)}
-              autoComplete="username"
-            />
-            {errors.email && <p className="err">{errors.email}</p>}
-          </div>
+          {mode === "credentials" ? (
+            <>
+              <div>
+                <label className="label" htmlFor="login-email">
+                  Email
+                </label>
+                <input
+                  id="login-email"
+                  type="email"
+                  className="input"
+                  value={fields.email}
+                  onChange={(event) => set("email", event.target.value)}
+                  autoComplete="username"
+                />
+                {errors.email && <p className="err">{errors.email}</p>}
+              </div>
 
-          <div>
-            <label className="label" htmlFor="login-password">
-              Password
-            </label>
-            <input
-              id="login-password"
-              type="password"
-              className="input"
-              value={fields.password}
-              onChange={(event) => set("password", event.target.value)}
-              autoComplete="current-password"
-            />
-            {errors.password && <p className="err">{errors.password}</p>}
-          </div>
+              <div>
+                <label className="label" htmlFor="login-password">
+                  Password
+                </label>
+                <input
+                  id="login-password"
+                  type="password"
+                  className="input"
+                  value={fields.password}
+                  onChange={(event) => set("password", event.target.value)}
+                  autoComplete="current-password"
+                />
+                {errors.password && <p className="err">{errors.password}</p>}
+              </div>
+            </>
+          ) : (
+            <div>
+              <label className="label" htmlFor="login-token">
+                Bearer token
+              </label>
+              <textarea
+                id="login-token"
+                className="input min-h-24"
+                value={tokenInput}
+                onChange={(event) => {
+                  setTokenInput(event.target.value);
+                  setSubmitError(null);
+                }}
+                placeholder="Paste token with or without Bearer prefix"
+                spellCheck={false}
+              />
+              <p className="text-xs text-slate-500 mt-1">
+                Useful for GitHub Pages when credential login is blocked by CORS.
+              </p>
+            </div>
+          )}
         </div>
 
         <div className="px-6 py-4 border-t flex justify-end gap-2">
@@ -127,10 +201,16 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
             className="text-sm bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-medium px-4 py-2 rounded"
             disabled={submitting}
           >
-            {submitting ? "Logging in..." : "Login"}
+            {mode === "token" ? "Use token" : submitting ? "Logging in..." : "Login"}
           </button>
         </div>
       </form>
     </div>
   );
+}
+
+function normalizeToken(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return trimmed.replace(/^Bearer\s+/i, "");
 }
