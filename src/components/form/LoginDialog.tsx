@@ -6,7 +6,8 @@ import { ApiResponseError } from "../../api/client";
 const DEFAULT_EMAIL = "meiralvtest@nice.com";
 
 interface LoginDialogProps {
-  onLogin: (token: string) => void;
+  defaultRemember?: boolean;
+  onLogin: (token: string, remember: boolean) => void;
   onCancel: () => void;
 }
 
@@ -17,13 +18,14 @@ interface LoginFields {
 
 type LoginMode = "credentials" | "token";
 
-export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
+export function LoginDialog({ defaultRemember = true, onLogin, onCancel }: LoginDialogProps) {
   const [mode, setMode] = useState<LoginMode>("credentials");
   const [fields, setFields] = useState<LoginFields>({
     email: DEFAULT_EMAIL,
     password: "",
   });
   const [tokenInput, setTokenInput] = useState("");
+  const [rememberLogin, setRememberLogin] = useState(defaultRemember);
   const [errors, setErrors] = useState<Partial<LoginFields>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -49,7 +51,7 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
         setSubmitError("Paste a valid bearer token.");
         return;
       }
-      onLogin(normalized);
+      onLogin(normalized, rememberLogin);
       return;
     }
 
@@ -59,7 +61,7 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
     setSubmitError(null);
     try {
       const token = await login(fields.email.trim(), fields.password);
-      onLogin(token);
+      onLogin(token, rememberLogin);
     } catch (err) {
       if (err instanceof ApiResponseError) {
         setSubmitError(err.body.message ?? `Login failed with HTTP ${err.status}`);
@@ -99,30 +101,15 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
           <p className="text-xs text-slate-500 mt-1">
             Use your test environment credentials to get a session Bearer token.
           </p>
-          <div className="mt-3 inline-flex rounded-md border border-slate-200 p-1 bg-slate-50">
-            <button
-              type="button"
-              onClick={() => switchMode("credentials")}
-              className={`px-3 py-1.5 text-xs font-medium rounded ${
-                mode === "credentials"
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Credentials
-            </button>
-            <button
-              type="button"
-              onClick={() => switchMode("token")}
-              className={`px-3 py-1.5 text-xs font-medium rounded ${
-                mode === "token"
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Paste Token
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => switchMode(mode === "credentials" ? "token" : "credentials")}
+            className="mt-3 text-xs text-slate-500 hover:text-slate-700 underline"
+          >
+            {mode === "credentials"
+              ? "Advanced: paste token manually"
+              : "Back to credential login"}
+          </button>
         </div>
 
         <div className="px-6 py-5 space-y-4">
@@ -185,6 +172,15 @@ export function LoginDialog({ onLogin, onCancel }: LoginDialogProps) {
               </p>
             </div>
           )}
+
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            <input
+              type="checkbox"
+              checked={rememberLogin}
+              onChange={(event) => setRememberLogin(event.target.checked)}
+            />
+            Remember me on this browser
+          </label>
         </div>
 
         <div className="px-6 py-4 border-t flex justify-end gap-2">

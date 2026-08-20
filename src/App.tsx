@@ -23,7 +23,7 @@ import type { CsvParseResult } from "./utils/csvParser";
 type View = "form" | "import" | "dashboard" | "status";
 
 export default function App() {
-  const { token, setToken, clearToken } = useAuth();
+  const { token, setToken, clearToken, rememberLogin } = useAuth();
   const [view, setView] = useState<View>("form");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -106,7 +106,12 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col">
-      <Header token={token} onLoginToken={setToken} onLogout={clearToken} />
+      <Header
+        token={token}
+        rememberLogin={rememberLogin}
+        onLoginToken={setToken}
+        onLogout={clearToken}
+      />
 
       <div className="bg-white border-b px-6">
         <nav className="flex gap-1">

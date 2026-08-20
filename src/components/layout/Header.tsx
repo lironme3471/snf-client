@@ -4,15 +4,16 @@ import { LoginDialog } from "../form/LoginDialog";
 
 interface HeaderProps {
   token: string;
-  onLoginToken: (token: string) => void;
+  rememberLogin: boolean;
+  onLoginToken: (token: string, remember: boolean) => void;
   onLogout: () => void;
 }
 
-export function Header({ token, onLoginToken, onLogout }: HeaderProps) {
+export function Header({ token, rememberLogin, onLoginToken, onLogout }: HeaderProps) {
   const [loginOpen, setLoginOpen] = useState(false);
 
-  function handleLogin(tokenValue: string) {
-    onLoginToken(tokenValue);
+  function handleLogin(tokenValue: string, remember: boolean) {
+    onLoginToken(tokenValue, remember);
     setLoginOpen(false);
   }
 
@@ -51,6 +52,7 @@ export function Header({ token, onLoginToken, onLogout }: HeaderProps) {
 
       {loginOpen && (
         <LoginDialog
+          defaultRemember={rememberLogin}
           onLogin={handleLogin}
           onCancel={() => setLoginOpen(false)}
         />
