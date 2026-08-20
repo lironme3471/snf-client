@@ -21,6 +21,7 @@ function ExpiryCountdown({ expiresAt }: { expiresAt: string }) {
 
 function MediaUploadRow({ url, autoBlob }: { url: MediaUploadUrl; autoBlob?: Blob }) {
   const [state, setState] = useState<UploadState>({ status: "idle", progress: 0 });
+  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const inputRef = useRef<HTMLInputElement>(null);
 
   // auto-upload sample blob immediately when provided
@@ -29,6 +30,7 @@ function MediaUploadRow({ url, autoBlob }: { url: MediaUploadUrl; autoBlob?: Blo
   }, []);
 
   async function handleBlob(blob: Blob) {
+    setCopyState("idle");
     setState({ status: "uploading", progress: 0 });
     try {
       await uploadWithProgress(blob, url, (p) =>
@@ -41,6 +43,16 @@ function MediaUploadRow({ url, autoBlob }: { url: MediaUploadUrl; autoBlob?: Blo
         progress: 0,
         error: err instanceof Error ? err.message : "Upload failed",
       });
+    }
+  }
+
+  async function copyCurlCommand() {
+    const command = buildCurlUploadCommand(url);
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopyState("copied");
+    } catch {
+      setCopyState("failed");
     }
   }
 
@@ -92,6 +104,22 @@ function MediaUploadRow({ url, autoBlob }: { url: MediaUploadUrl; autoBlob?: Blo
             ? "Auto-uploading sample…"
             : "Choose file & upload"}
         </button>
+
+        <button
+          type="button"
+          onClick={copyCurlCommand}
+          className="text-xs border border-slate-300 hover:bg-slate-100 text-slate-700 px-3 py-1.5 rounded"
+          title="Copy a curl command for manual upload"
+        >
+          Copy curl
+        </button>
+
+        {copyState === "copied" && (
+          <span className="text-emerald-600 text-xs">Copied curl command</span>
+        )}
+        {copyState === "failed" && (
+          <span className="text-red-500 text-xs">Copy failed</span>
+        )}
 
         {state.status === "uploading" && (
           <div className="flex-1 bg-slate-200 rounded h-2">
@@ -181,6 +209,22 @@ function describeUploadNetworkError(uploadUrl: string): string {
     // Fall back to a generic message when URL parsing fails.
   }
   return "Network error";
+}
+
+function buildCurlUploadCommand(url: MediaUploadUrl): string {
+  const headerLines = Object.entries(url.headers ?? {})
+    .map(([key, value]) => `  -H ${shellQuote(`${key}: ${value}`)} \\\n`)
+    .join("");
+
+  return (
+    `curl -X ${url.httpMethod} ${shellQuote(url.uploadUrl)} \\\n` +
+    headerLines +
+    `  --upload-file '/absolute/path/to/file'`
+  );
+}
+
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'"'"'`)}'`;
 }
 
 interface Props {
