@@ -1,0 +1,2 @@
+externalInteractionId,channelType,direction,startTime,endTime,externalContactId,externalContactStartTime,agentIdentifier,agentSystemName,agentIdentifierType,agentIdentifierValue,agentFrom,customerIdentifier,customerFrom
+CSV-NO-MEDIA-004,PHONE_CALL,INBOUND,2026-08-22T10:00:00.000Z,2026-08-22T10:05:00.000Z,CSV-CONTACT-004,2026-08-22T10:00:00.000Z,5525,Generic API System,EXTERNAL_IDENTIFIER,5525,5525,+15551234567,+15551234567

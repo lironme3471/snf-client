@@ -61,6 +61,21 @@ function parseRow(
   // return null if required fields are missing so we don't push a broken object
   if (errors.some((e) => e.row === rowNum)) return null;
 
+  const agentFrom = row["agentFrom"]?.trim();
+  const agentTo = row["agentTo"]?.trim();
+  const customerIdentifier = row["customerIdentifier"]?.trim();
+  const customerFrom = row["customerFrom"]?.trim();
+  const customerTo = row["customerTo"]?.trim();
+
+  if (!!agentFrom === !!agentTo) {
+    err("agentFrom", 'Provide exactly one of "agentFrom" or "agentTo"');
+  }
+  if (customerIdentifier && !!customerFrom === !!customerTo) {
+    err("customerFrom", 'Provide exactly one of "customerFrom" or "customerTo"');
+  }
+
+  if (errors.some((e) => e.row === rowNum)) return null;
+
   const mediaId = row["mediaId"]?.trim();
   const mediaType = row["mediaType"]?.trim() as MediaType | undefined;
   const hasMedia = !!mediaId;
@@ -82,8 +97,6 @@ function parseRow(
     .filter(([k, v]) => k.startsWith("bd_") && v?.trim())
     .map(([k, v]) => ({ key: k.slice(3), value: v.trim() }));
 
-  const customerIdentifier = row["customerIdentifier"]?.trim();
-
   const interaction: InputInteraction = {
     externalInteractionId: row["externalInteractionId"].trim(),
     channelType: row["channelType"].trim() as ChannelType,
@@ -99,6 +112,8 @@ function parseRow(
         participantIdentifier: row["agentIdentifier"].trim(),
         isLeadingAgentUser: true,
         participantMediaReferences: [],
+        ...(agentFrom && { participantFrom: agentFrom }),
+        ...(agentTo && { participantTo: agentTo }),
         externalIdentifier: {
           systemName: row["agentSystemName"].trim(),
           identifierType: row["agentIdentifierType"].trim(),
@@ -112,11 +127,11 @@ function parseRow(
               participantIdentifier: customerIdentifier,
               isLeadingAgentUser: false,
               participantMediaReferences: [],
-              ...(row["customerFrom"]?.trim() && {
-                participantFrom: row["customerFrom"].trim(),
+              ...(customerFrom && {
+                participantFrom: customerFrom,
               }),
-              ...(row["customerTo"]?.trim() && {
-                participantTo: row["customerTo"].trim(),
+              ...(customerTo && {
+                participantTo: customerTo,
               }),
             },
           ]
@@ -253,6 +268,8 @@ function buildCsvTestRow(): string[] {
     "Generic API System",
     "EXTERNAL_IDENTIFIER",
     "5525",
+    "5525",
+    "",
     "",
     "",
     "",
@@ -282,6 +299,8 @@ export function generateCsvTemplate(): string {
     "agentSystemName",
     "agentIdentifierType",
     "agentIdentifierValue",
+    "agentFrom",
+    "agentTo",
     "customerIdentifier",
     "customerFrom",
     "customerTo",
