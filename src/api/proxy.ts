@@ -11,8 +11,7 @@ export const HAS_PROXY = PROXY_BASE.length > 0;
 export function buildLoginUrl(): string {
   const env = getCurrentEnv();
   if (import.meta.env.DEV) return `/login-api/${env}/public/user/login`;
-  // The hosted Cloudflare proxy only forwards to the test login endpoint today.
-  if (HAS_PROXY) return `${PROXY_BASE}/login`;
+  if (HAS_PROXY) return `${PROXY_BASE}/login?env=${env}`;
   return `${getLoginHost(env)}/public/user/login`;
 }
 

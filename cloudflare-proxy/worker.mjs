@@ -1,5 +1,8 @@
 const ALLOWED_ORIGIN = "https://lironme3471.github.io";
-const LOGIN_TARGET = "https://na1.test.nice-incontact.com/public/user/login";
+const LOGIN_TARGETS = {
+  test: "https://na1.test.nice-incontact.com/public/user/login",
+  prod: "https://na1.nice-incontact.com/public/user/login",
+};
 
 export default {
   async fetch(request) {
@@ -10,7 +13,7 @@ export default {
     }
 
     if (url.pathname === "/login" && request.method === "POST") {
-      return handleLogin(request);
+      return handleLogin(request, url);
     }
 
     if (url.pathname === "/upload" && (request.method === "PUT" || request.method === "POST")) {
@@ -21,8 +24,10 @@ export default {
   },
 };
 
-async function handleLogin(request) {
-  const upstream = await fetch(LOGIN_TARGET, {
+async function handleLogin(request, url) {
+  const env = url.searchParams.get("env") === "prod" ? "prod" : "test";
+
+  const upstream = await fetch(LOGIN_TARGETS[env], {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: await request.text(),
