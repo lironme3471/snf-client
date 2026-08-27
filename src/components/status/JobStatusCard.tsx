@@ -16,6 +16,7 @@ interface Props {
 
 export function JobStatusCard({ job, polling, onRefresh }: Props) {
   const { jobId, status, creationTime, completionTime, interactionCounters } = job;
+  const counters = interactionCounters ?? { total: 0, succeeded: 0, failed: 0, inProgress: 0 };
 
   return (
     <div className="bg-white rounded-lg border p-5 space-y-4">
@@ -35,10 +36,10 @@ export function JobStatusCard({ job, polling, onRefresh }: Props) {
       </div>
 
       <div className="grid grid-cols-4 gap-3 text-center">
-        <StatBox label="Total" value={interactionCounters.total} color="slate" />
-        <StatBox label="Succeeded" value={interactionCounters.succeeded} color="green" />
-        <StatBox label="Failed" value={interactionCounters.failed} color="red" />
-        <StatBox label="In progress" value={interactionCounters.inProgress} color="blue" />
+        <StatBox label="Total" value={counters.total} color="slate" />
+        <StatBox label="Succeeded" value={counters.succeeded} color="green" />
+        <StatBox label="Failed" value={counters.failed} color="red" />
+        <StatBox label="In progress" value={counters.inProgress} color="blue" />
       </div>
 
       <div className="flex gap-6 text-xs text-slate-500">

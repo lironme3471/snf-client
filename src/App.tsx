@@ -12,6 +12,8 @@ import { ImportPreview } from "./components/import/ImportPreview";
 import { JobDashboard } from "./components/dashboard/JobDashboard";
 
 import { useAuth } from "./hooks/useAuth";
+import { useEnvironment } from "./hooks/useEnvironment";
+import type { ApiEnv } from "./api/environments";
 import { useJobPolling } from "./hooks/useJobPolling";
 import { buildManifestZip } from "./utils/zipBuilder";
 import { manifestSchema, type ManifestFormValues } from "./utils/validation";
@@ -24,6 +26,7 @@ type View = "form" | "import" | "dashboard" | "status";
 
 export default function App() {
   const { token, setToken, clearToken, rememberLogin } = useAuth();
+  const { env, setEnv } = useEnvironment();
   const [view, setView] = useState<View>("form");
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -31,7 +34,7 @@ export default function App() {
   const [csvResult, setCsvResult] = useState<CsvParseResult | null>(null);
   const [mockBlobMap, setMockBlobMap] = useState<Map<string, Blob>>(new Map());
 
-  const { jobs, addJob, updateJob, clearAll } = useJobHistory();
+  const { jobs, addJob, updateJob, clearAll } = useJobHistory(env);
 
   const methods = useForm<ManifestFormValues>({
     resolver: zodResolver(manifestSchema),
@@ -51,7 +54,7 @@ export default function App() {
     if (stored && stored.status !== polledJob.status) {
       updateJob(selectedJobId, {
         status: polledJob.status,
-        interactionCounters: polledJob.interactionCounters,
+        interactionCounters: polledJob.interactionCounters ?? stored.interactionCounters,
       });
     }
   }
@@ -87,6 +90,13 @@ export default function App() {
     }
   }
 
+  function handleEnvChange(newEnv: ApiEnv) {
+    setEnv(newEnv);
+    clearToken();
+    setSelectedJobId(null);
+    setView("form");
+  }
+
   function handleJobsCreated(newJobs: JobRecord[]) {
     newJobs.forEach((j) => addJob(j));
     setView("dashboard");
@@ -111,6 +121,8 @@ export default function App() {
         rememberLogin={rememberLogin}
         onLoginToken={setToken}
         onLogout={clearToken}
+        env={env}
+        onEnvChange={handleEnvChange}
       />
 
       <div className="bg-white border-b px-6">

@@ -32,7 +32,7 @@ export function JobDashboard({ jobs, token, onSelectJob, onUpdateJob, onClearAll
         const updated = await getJob(token, job.jobId);
         onUpdateJob(job.jobId, {
           status: updated.status,
-          interactionCounters: updated.interactionCounters,
+          interactionCounters: updated.interactionCounters ?? job.interactionCounters,
         });
       } catch {
         // silently skip failed refreshes

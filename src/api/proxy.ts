@@ -1,3 +1,5 @@
+import { getCurrentEnv, getLoginHost } from "./environments";
+
 const RAW_PROXY_BASE = import.meta.env.VITE_PROXY_BASE?.trim() ?? "";
 
 export const PROXY_BASE = RAW_PROXY_BASE
@@ -7,9 +9,11 @@ export const PROXY_BASE = RAW_PROXY_BASE
 export const HAS_PROXY = PROXY_BASE.length > 0;
 
 export function buildLoginUrl(): string {
-  if (import.meta.env.DEV) return "/login-api/public/user/login";
+  const env = getCurrentEnv();
+  if (import.meta.env.DEV) return `/login-api/${env}/public/user/login`;
+  // The hosted Cloudflare proxy only forwards to the test login endpoint today.
   if (HAS_PROXY) return `${PROXY_BASE}/login`;
-  return "https://na1.test.nice-incontact.com/public/user/login";
+  return `${getLoginHost(env)}/public/user/login`;
 }
 
 export function isS3LikeUrl(uploadUrl: string): boolean {

@@ -2,10 +2,8 @@ import { ApiResponseError } from "./client";
 import type { ApiError, LoginResponse } from "../types/api";
 import { buildLoginUrl } from "./proxy";
 
-const LOGIN_URL = buildLoginUrl();
-
 export async function login(email: string, password: string): Promise<string> {
-  const res = await fetch(LOGIN_URL, {
+  const res = await fetch(buildLoginUrl(), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),

@@ -25,7 +25,7 @@ export function InteractionsList({ token, jobId, isJobRunning }: Props) {
     setError(null);
     try {
       const page = await listJobInteractions(token, jobId);
-      setInteractions(page.interactions);
+      setInteractions(page.interactions ?? []);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load interactions");
     } finally {

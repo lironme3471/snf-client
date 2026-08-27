@@ -1,7 +1,11 @@
 import type { ApiError } from "../types/api";
+import { getApiHost, getCurrentEnv } from "./environments";
 
-export const BASE_URL =
-  `${import.meta.env.DEV ? "/nice-api" : "https://api-na1.test.niceincontact.com"}/api/store-and-forward/v1`;
+function getBaseUrl(): string {
+  const env = getCurrentEnv();
+  const host = import.meta.env.DEV ? `/nice-api/${env}` : getApiHost(env);
+  return `${host}/api/store-and-forward/v1`;
+}
 
 export class ApiResponseError extends Error {
   constructor(
@@ -17,7 +21,7 @@ export async function apiFetch<T>(
   token: string,
   init: RequestInit = {}
 ): Promise<T> {
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${getBaseUrl()}${path}`, {
     ...init,
     headers: {
       Authorization: `Bearer ${token}`,

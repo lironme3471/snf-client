@@ -1,5 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import type { CreateJobResponse, JobStatus, InteractionCounters } from "../types/api";
+import type { ApiEnv } from "../api/environments";
 
 export interface JobRecord {
   jobId: string;
@@ -14,43 +15,63 @@ export interface JobRecord {
   batchTotal?: number;
 }
 
-const STORAGE_KEY = "snf_job_history";
+const LEGACY_STORAGE_KEY = "snf_job_history";
 
-function load(): JobRecord[] {
+function storageKey(env: ApiEnv): string {
+  return `snf_job_history_${env}`;
+}
+
+// One-time migration: history predating the test/prod toggle lived under one
+// shared key. Treat it as test-environment data so it isn't lost or mixed with prod.
+function migrateLegacyHistory() {
+  const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+  if (legacy === null) return;
+  if (localStorage.getItem(storageKey("test")) === null) {
+    localStorage.setItem(storageKey("test"), legacy);
+  }
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
+}
+
+function load(env: ApiEnv): JobRecord[] {
+  migrateLegacyHistory();
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    return JSON.parse(localStorage.getItem(storageKey(env)) ?? "[]");
   } catch {
     return [];
   }
 }
 
-function save(jobs: JobRecord[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(jobs));
+function save(env: ApiEnv, jobs: JobRecord[]) {
+  localStorage.setItem(storageKey(env), JSON.stringify(jobs));
 }
 
-export function useJobHistory() {
-  const [jobs, setJobs] = useState<JobRecord[]>(load);
+export function useJobHistory(env: ApiEnv) {
+  const [jobs, setJobs] = useState<JobRecord[]>(() => load(env));
+
+  useEffect(() => {
+    setJobs(load(env));
+  }, [env]);
 
   const addJob = useCallback((record: JobRecord) => {
     setJobs((prev) => {
       const next = [record, ...prev];
-      save(next);
+      save(env, next);
       return next;
     });
-  }, []);
+  }, [env]);
 
   const updateJob = useCallback((jobId: string, patch: Partial<JobRecord>) => {
     setJobs((prev) => {
       const next = prev.map((j) => (j.jobId === jobId ? { ...j, ...patch } : j));
-      save(next);
+      save(env, next);
       return next;
     });
-  }, []);
+  }, [env]);
 
   const clearAll = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(storageKey(env));
     setJobs([]);
-  }, []);
+  }, [env]);
 
   return { jobs, addJob, updateJob, clearAll };
 }

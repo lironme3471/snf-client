@@ -153,8 +153,9 @@ async function uploadWithProgress(
   let requestHeaders: Record<string, string> = { ...(url.headers ?? {}) };
 
   if (import.meta.env.DEV && isS3LikeUrl(uploadUrl)) {
-    const s3Url = new URL(uploadUrl);
-    uploadUrl = `/s3-proxy${s3Url.pathname}${s3Url.search}`;
+    const proxyUrl = new URL("/s3-proxy", window.location.origin);
+    proxyUrl.searchParams.set("url", uploadUrl);
+    uploadUrl = `${proxyUrl.pathname}${proxyUrl.search}`;
   }
 
   if (!import.meta.env.DEV && HAS_PROXY && isS3LikeUrl(uploadUrl)) {
