@@ -16,7 +16,7 @@ type MockMedia = MockInteraction["media"][number];
 
 const MOCK_AUDIO_DURATION_SECONDS = 120;
 
-export type MockType = "voice" | "voiceScreen";
+export type MockType = "voice" | "voiceScreen" | "chat" | "sms" | "email";
 
 /** Interaction + a map of mediaId → Blob for auto-upload after job creation. */
 export interface MockResult {
@@ -27,6 +27,9 @@ export interface MockResult {
 export const MOCK_LABELS: Record<MockType, string> = {
   voice: "Voice only",
   voiceScreen: "Voice + Screen",
+  chat: "Chat only",
+  sms: "SMS",
+  email: "Email",
 };
 
 function baseParticipants(cfg: AgentConfig): MockInteraction["participants"] {
@@ -151,7 +154,148 @@ export function generateVoiceScreenMock(cfg: AgentConfig): Promise<MockResult> {
   return generatePhoneMock(cfg, true);
 }
 
+export function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
+  const t = times();
+  const now = Date.now();
+  const mediaId = `TEXT-${now}`;
+  const participants = baseParticipants(cfg);
+  const chatContent = "Customer: Hi! I need help resetting my password.\nAgent: Hello! I can help. Click 'Forgot Password' below the login field and follow the steps.\nCustomer: I do not see that option.\nAgent: It is directly below the password field. Shall I send a direct reset link instead?\nCustomer: Yes please.\nAgent: Done! Check your email. The reset link expires in 30 minutes.";
+
+  return Promise.resolve({
+    interaction: {
+      externalInteractionId: `INT-CHAT-${now}`,
+      channelType: "CHAT",
+      direction: "INBOUND",
+      startTime: t.start,
+      endTime: t.end,
+      externalContactId: `CONTACT-${now}`,
+      externalContactStartTime: t.start,
+      subject: "Chat support conversation",
+      hasMultipleInteractions: false,
+      isFirstInteraction: true,
+      participants: [
+        {
+          ...participants[0],
+          participantTo: "chat-widget-production",
+          participantMediaReferences: [{ mediaId }],
+        },
+        {
+          ...participants[1],
+          participantFrom: "visitor-8a3f2c-d91e",
+          participantIdentifier: "visitor-8a3f2c-d91e",
+          isLeadingAgentUser: false,
+          participantMediaReferences: [],
+        },
+      ],
+      media: [
+        {
+          mediaId,
+          mediaType: "TEXT",
+          startTime: t.start,
+          endTime: t.end,
+          content: chatContent,
+        },
+      ],
+    },
+    mediaBlobs: new Map(),
+  });
+}
+
+export function generateSmsMock(cfg: AgentConfig): Promise<MockResult> {
+  const t = times();
+  const now = Date.now();
+  const mediaId = `SMS-${now}`;
+  const participants = baseParticipants(cfg);
+  const smsContent = "Hi, I need help with my recent order.\nSure! Can you please provide your order number?\nOrder #78423. I have not received it yet.\nLet me check that for you right away.";
+
+  return Promise.resolve({
+    interaction: {
+      externalInteractionId: `INT-SMS-${now}`,
+      channelType: "SMS",
+      direction: "INBOUND",
+      startTime: t.start,
+      endTime: t.end,
+      externalContactId: `CONTACT-${now}`,
+      externalContactStartTime: t.start,
+      subject: "SMS support conversation",
+      hasMultipleInteractions: false,
+      isFirstInteraction: true,
+      participants: [
+        {
+          ...participants[0],
+          participantTo: "+18005551234",
+          participantMediaReferences: [{ mediaId }],
+        },
+        {
+          ...participants[1],
+          participantFrom: "+15559876543",
+          participantIdentifier: "+15559876543",
+          isLeadingAgentUser: false,
+          participantMediaReferences: [],
+        },
+      ],
+      media: [
+        {
+          mediaId,
+          mediaType: "TEXT",
+          startTime: t.start,
+          endTime: t.end,
+          content: smsContent,
+        },
+      ],
+    },
+    mediaBlobs: new Map(),
+  });
+}
+
+export function generateEmailMock(cfg: AgentConfig): Promise<MockResult> {
+  const t = times();
+  const now = Date.now();
+  const mediaId = `EMAIL-${now}`;
+
+  return Promise.resolve({
+    interaction: {
+      externalInteractionId: `INT-EMAIL-${now}`,
+      channelType: "EMAIL",
+      direction: "INBOUND",
+      startTime: t.start,
+      endTime: t.end,
+      externalContactId: `CONTACT-${now}`,
+      externalContactStartTime: t.start,
+      subject: "Request to update billing address",
+      hasMultipleInteractions: false,
+      isFirstInteraction: true,
+      participants: baseParticipants(cfg).map((participant, index) =>
+        index === 0
+          ? {
+              ...participant,
+              participantTo: "support@company.com",
+              participantMediaReferences: [{ mediaId }],
+            }
+          : {
+              ...participant,
+              participantFrom: "customer@example.com",
+              participantIdentifier: "customer@example.com",
+            }
+      ),
+      media: [
+        {
+          mediaId,
+          mediaType: "TEXT",
+          startTime: t.start,
+          endTime: t.end,
+          content: "Hello, I recently moved and need to update the billing address on my account. Please let me know what information you need from me.\n\nThank you,\nCustomer",
+        },
+      ],
+    },
+    mediaBlobs: new Map(),
+  });
+}
+
 export const MOCK_GENERATORS: Record<MockType, (cfg: AgentConfig) => Promise<MockResult>> = {
   voice: generateVoiceMock,
   voiceScreen: generateVoiceScreenMock,
+  chat: generateChatMock,
+  sms: generateSmsMock,
+  email: generateEmailMock,
 };

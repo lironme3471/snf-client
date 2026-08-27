@@ -116,6 +116,13 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
                     )}
                   </div>
                 ))}
+                {values.media
+                  .filter((m) => m.mediaType === "TEXT" && m.content)
+                  .map((m) => (
+                    <pre key={m.mediaId} className="mt-2 whitespace-pre-wrap rounded bg-white p-2 text-xs text-slate-600">
+                      {m.content}
+                    </pre>
+                  ))}
               </div>
             </div>
           )}
