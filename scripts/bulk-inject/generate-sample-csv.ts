@@ -60,34 +60,63 @@ const headers = [
 const now = Date.now();
 const rows = [headers.join(",")];
 
+const agents = [
+  { id: "agent-001", name: "Support Agent 1", system: "SNF" },
+  { id: "agent-002", name: "Support Agent 2", system: "SNF" },
+  { id: "agent-003", name: "Support Agent 3", system: "SNF" },
+  { id: "agent-004", name: "Support Agent 4", system: "SNF" },
+  { id: "agent-005", name: "Support Agent 5", system: "SNF" },
+];
+
+const customers = [
+  { id: "customer-001", from: "+1-555-0001", to: "+1-800-SUPPORT" },
+  { id: "customer-002", from: "+1-555-0002", to: "+1-800-SUPPORT" },
+  { id: "customer-003", from: "+1-555-0003", to: "+1-800-SUPPORT" },
+  { id: "customer-004", from: "+1-555-0004", to: "+1-800-SUPPORT" },
+  { id: "customer-005", from: "+1-555-0005", to: "+1-800-SUPPORT" },
+];
+
+const subjects = [
+  "Account inquiry",
+  "Technical support",
+  "Billing question",
+  "Service complaint",
+  "Feature request",
+];
+
 for (let i = 0; i < count; i++) {
   const start = new Date(now - 3600_000 + i * 1000).toISOString();
   const end = new Date(now - 3600_000 + i * 1000 + 30_000).toISOString();
   const runId = `${now}-${i}`;
 
+  const agent = agents[i % agents.length];
+  const customer = customers[i % customers.length];
+  const subject = subjects[i % subjects.length];
+  const channelType = withMedia ? "PHONE_CALL" : "CHAT";
+
   const base = [
     `SCALE-TEST-${runId}`,
-    withMedia ? "PHONE_CALL" : "CHAT",
+    channelType,
     "INBOUND",
     start,
     end,
-    `SCALE-CONTACT-${runId}`,
+    `CONTACT-${runId}`,
     start,
-    "Scale test interaction",
-    "5525",
-    "Generic API System",
+    subject,
+    agent.id,
+    agent.system,
     "EXTERNAL_IDENTIFIER",
-    "5525",
-    "",
-    "5525",
-    "",
-    "",
-    "",
+    agent.id,
+    "", // agentFrom
+    agent.id, // agentTo
+    customer.id,
+    customer.from,
+    "", // customerTo
   ];
 
   const media = withMedia
-    ? [`AUDIO-${runId}`, "AUDIO", "", "", mediaFileName, "MD5", mediaChecksum, ""]
-    : [`TEXT-${runId}`, "TEXT", "", "", "", "", "", "Synthetic scale-test content."];
+    ? [`AUDIO-${runId}`, "AUDIO", start, end, mediaFileName, "MD5", mediaChecksum, ""]
+    : [`TEXT-${runId}`, "TEXT", "", "", "", "", "", "Customer inquiry and support response."];
 
   rows.push([...base, ...media].join(","));
 }
