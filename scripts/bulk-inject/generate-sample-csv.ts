@@ -61,11 +61,11 @@ const now = Date.now();
 const rows = [headers.join(",")];
 
 const agents = [
-  { id: "agent-001", name: "Support Agent 1", system: "SNF" },
-  { id: "agent-002", name: "Support Agent 2", system: "SNF" },
-  { id: "agent-003", name: "Support Agent 3", system: "SNF" },
-  { id: "agent-004", name: "Support Agent 4", system: "SNF" },
-  { id: "agent-005", name: "Support Agent 5", system: "SNF" },
+  { id: "agent-001", name: "Support Agent 1", system: "Generic API System" },
+  { id: "agent-002", name: "Support Agent 2", system: "Generic API System" },
+  { id: "agent-003", name: "Support Agent 3", system: "Generic API System" },
+  { id: "agent-004", name: "Support Agent 4", system: "Generic API System" },
+  { id: "agent-005", name: "Support Agent 5", system: "Generic API System" },
 ];
 
 const customers = [
@@ -107,10 +107,10 @@ for (let i = 0; i < count; i++) {
     agent.system,
     "EXTERNAL_IDENTIFIER",
     agent.id,
-    "", // agentFrom
-    agent.id, // agentTo
-    customer.id,
-    customer.from,
+    agent.id, // agentFrom
+    "", // agentTo
+    "", // customerIdentifier
+    "", // customerFrom
     "", // customerTo
   ];
 
