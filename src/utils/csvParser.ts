@@ -111,7 +111,7 @@ function parseRow(
         participantType: "AGENT_USER",
         participantIdentifier: row["agentIdentifier"].trim(),
         isLeadingAgentUser: true,
-        participantMediaReferences: [],
+        participantMediaReferences: hasMedia ? [{ mediaId }] : [],
         ...(agentFrom && { participantFrom: agentFrom }),
         ...(agentTo && { participantTo: agentTo }),
         externalIdentifier: {

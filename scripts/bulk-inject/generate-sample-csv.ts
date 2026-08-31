@@ -60,13 +60,9 @@ const headers = [
 const now = Date.now();
 const rows = [headers.join(",")];
 
-const agents = [
-  { id: "agent-001", name: "Support Agent 1", system: "Generic API System" },
-  { id: "agent-002", name: "Support Agent 2", system: "Generic API System" },
-  { id: "agent-003", name: "Support Agent 3", system: "Generic API System" },
-  { id: "agent-004", name: "Support Agent 4", system: "Generic API System" },
-  { id: "agent-005", name: "Support Agent 5", system: "Generic API System" },
-];
+// "5525" is the only agentIdentifier value confirmed mapped to a real CXone
+// user under the "Generic API System" third-party system in this tenant.
+const agents = [{ id: "5525", name: "Support Agent 1", system: "Generic API System" }];
 
 const customers = [
   { id: "customer-001", from: "+1-555-0001", to: "+1-800-SUPPORT" },
@@ -107,10 +103,10 @@ for (let i = 0; i < count; i++) {
     agent.system,
     "EXTERNAL_IDENTIFIER",
     agent.id,
-    agent.id, // agentFrom
-    "", // agentTo
-    "", // customerIdentifier
-    "", // customerFrom
+    "", // agentFrom
+    agent.id, // agentTo
+    customer.id,
+    customer.from, // customerFrom (required on INBOUND interactions)
     "", // customerTo
   ];
 
