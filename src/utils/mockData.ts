@@ -159,7 +159,7 @@ export function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
   const now = Date.now();
   const mediaId = `TEXT-${now}`;
   const participants = baseParticipants(cfg);
-  const chatContent = "Customer: I need help resetting my password.\nAgent: I can send a reset link now.";
+  const chatContent = "Customer: Hi! I need help resetting my password.\nAgent: Hello! I can help. Click 'Forgot Password' below the login field.\nCustomer: I do not see that option.\nAgent: It is directly below the password field. Shall I send a direct reset link?";
 
   return Promise.resolve({
     interaction: {
