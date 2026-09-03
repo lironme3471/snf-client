@@ -19,7 +19,7 @@ export const mediaSchema = z
     fileName: z.string().optional(),
     fileType: z.string().optional(),
     checksum: checksumSchema.optional(),
-    content: z.string().optional(),
+    content: z.string().max(256, "Maximum 256 characters").optional(),
     startTime: dateTimeString,
     endTime: dateTimeString,
     mediaLocation: z.string().optional(),
@@ -61,9 +61,9 @@ export const participantMediaRefSchema = z.object({
 export const participantSchema = z
   .object({
     participantType: z.enum(["AGENT_USER", "CUSTOMER", "PARTICIPANT"]),
-    participantFrom: z.string().optional(),
-    participantTo: z.string().optional(),
-    participantIdentifier: z.string().min(1, "Required"),
+    participantFrom: z.string().max(20, "Maximum 20 characters").optional(),
+    participantTo: z.string().max(20, "Maximum 20 characters").optional(),
+    participantIdentifier: z.string().min(1, "Required").max(20, "Maximum 20 characters"),
     isLeadingAgentUser: z.boolean().optional(),
     externalIdentifier: externalIdentifierSchema.optional(),
     participantMediaReferences: z.array(participantMediaRefSchema),
