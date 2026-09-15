@@ -25,6 +25,11 @@ if (!token || !jobId) {
 
 const page = await listJobInteractions(env, token, jobId);
 for (const i of page.interactions) {
-  console.log(`${i.interactionId}: ${i.status}${i.errorCode ? ` [${i.errorCode}]` : ""}`);
+  const media =
+    i.mediaUploadedCount != null && i.mediaExpectedCount != null
+      ? ` media=${i.mediaUploadedCount}/${i.mediaExpectedCount}`
+      : "";
+  console.log(`${i.interactionId}: ${i.status}${media}${i.errorCode ? ` [${i.errorCode}]` : ""}`);
   if (i.errorMessage) console.log(`  ${i.errorMessage}`);
+  console.log(JSON.stringify(i, null, 2));
 }

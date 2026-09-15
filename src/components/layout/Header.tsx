@@ -64,6 +64,17 @@ export function Header({
             </button>
             <button
               type="button"
+              onClick={() => handleEnvClick("staging")}
+              className={`px-3 py-1.5 transition-colors ${
+                env === "staging"
+                  ? "bg-amber-600 text-white"
+                  : "text-slate-400 hover:text-slate-200"
+              }`}
+            >
+              Staging
+            </button>
+            <button
+              type="button"
               onClick={() => handleEnvClick("prod")}
               className={`px-3 py-1.5 transition-colors ${
                 env === "prod"

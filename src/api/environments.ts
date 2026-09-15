@@ -1,4 +1,4 @@
-export type ApiEnv = "test" | "prod";
+export type ApiEnv = "test" | "staging" | "prod";
 
 const STORAGE_KEY = "snf_api_env";
 const DEFAULT_ENV: ApiEnv = "test";
@@ -8,6 +8,10 @@ const HOSTS: Record<ApiEnv, { apiHost: string; loginHost: string }> = {
     apiHost: "https://api-na1.test.niceincontact.com",
     loginHost: "https://na1.test.nice-incontact.com",
   },
+  staging: {
+    apiHost: "https://api-na1.staging.niceincontact.com",
+    loginHost: "https://na1.staging.nice-incontact.com",
+  },
   prod: {
     apiHost: "https://api-na1.niceincontact.com",
     loginHost: "https://na1.nice-incontact.com",
@@ -15,7 +19,7 @@ const HOSTS: Record<ApiEnv, { apiHost: string; loginHost: string }> = {
 };
 
 function isApiEnv(value: string | null): value is ApiEnv {
-  return value === "test" || value === "prod";
+  return value === "test" || value === "staging" || value === "prod";
 }
 
 export function getCurrentEnv(): ApiEnv {

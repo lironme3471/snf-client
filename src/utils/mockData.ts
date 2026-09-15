@@ -154,12 +154,35 @@ export function generateVoiceScreenMock(cfg: AgentConfig): Promise<MockResult> {
   return generatePhoneMock(cfg, true);
 }
 
+const CHAT_MESSAGE_INTERVAL_SECONDS = 10;
+
 export function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
   const t = times();
   const now = Date.now();
-  const mediaId = `TEXT-${now}`;
   const participants = baseParticipants(cfg);
-  const chatContent = "Customer: Hi! I need help resetting my password.\nAgent: Hello! I can help. Click 'Forgot Password' below the login field.\nCustomer: I do not see that option.\nAgent: It is directly below the password field. Shall I send a direct reset link?";
+  const messages: { speaker: "agent" | "customer"; text: string }[] = [
+    { speaker: "customer", text: "Hi! I need help resetting my password." },
+    { speaker: "agent", text: "Hello! I can help. Click 'Forgot Password' below the login field." },
+    { speaker: "customer", text: "I do not see that option." },
+    { speaker: "agent", text: "It is directly below the password field. Shall I send a direct reset link?" },
+  ];
+
+  const media: MockMedia[] = messages.map((m, i) => {
+    const msgStart = new Date(Date.parse(t.start) + i * CHAT_MESSAGE_INTERVAL_SECONDS * 1000);
+    const msgEnd = new Date(msgStart.getTime() + 1000);
+    return {
+      mediaId: `TEXT-${now}-${i}`,
+      mediaType: "TEXT",
+      startTime: msgStart.toISOString(),
+      endTime: msgEnd.toISOString(),
+      content: m.text,
+    };
+  });
+
+  const mediaIdsFor = (speaker: "agent" | "customer") =>
+    media
+      .filter((_, i) => messages[i].speaker === speaker)
+      .map((m) => ({ mediaId: m.mediaId }));
 
   return Promise.resolve({
     interaction: {
@@ -177,25 +200,17 @@ export function generateChatMock(cfg: AgentConfig): Promise<MockResult> {
         {
           ...participants[0],
           participantTo: "chat-widget",
-          participantMediaReferences: [{ mediaId }],
+          participantMediaReferences: mediaIdsFor("agent"),
         },
         {
           ...participants[1],
           participantFrom: "visitor-8a3f2c-d91e",
           participantIdentifier: "visitor-8a3f2c-d91e",
           isLeadingAgentUser: false,
-          participantMediaReferences: [],
+          participantMediaReferences: mediaIdsFor("customer"),
         },
       ],
-      media: [
-        {
-          mediaId,
-          mediaType: "TEXT",
-          startTime: t.start,
-          endTime: t.end,
-          content: chatContent,
-        },
-      ],
+      media,
     },
     mediaBlobs: new Map(),
   });
