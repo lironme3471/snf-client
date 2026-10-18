@@ -135,7 +135,10 @@ async function generatePhoneMock(
                 ...(screenId ? [{ mediaId: screenId, streamId: 0 }] : []),
               ],
             }
-          : p
+          : {
+              ...p,
+              participantMediaReferences: [{ mediaId: audioId, streamId: 0 }],
+            }
       ),
       media,
     },
