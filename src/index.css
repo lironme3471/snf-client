@@ -9,6 +9,9 @@
   .label {
     @apply block text-xs font-medium text-slate-600 mb-0.5;
   }
+  .kbd {
+    @apply inline-block border border-slate-300 bg-slate-50 rounded px-1 text-[10px] font-mono text-slate-700;
+  }
   .err {
     @apply text-red-500 text-xs mt-0.5;
   }

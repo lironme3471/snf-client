@@ -1,7 +1,48 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { LoginDialog } from "../form/LoginDialog";
 import type { ApiEnv } from "../../api/environments";
+import { formatTimeLeft, getTokenExpiry } from "../../api/token";
+
+const EXPIRING_SOON_MS = 5 * 60_000;
+
+function TokenStatus({ token, onExpired }: { token: string; onExpired: () => void }) {
+  const expiry = getTokenExpiry(token);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (expiry === null) return;
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, [expiry]);
+
+  if (expiry === null) {
+    return <span className="text-green-400 text-xs font-medium">Ready</span>;
+  }
+
+  const left = expiry - now;
+  if (left <= 0) {
+    return (
+      <button
+        type="button"
+        onClick={onExpired}
+        className="text-red-400 hover:text-red-300 text-xs font-medium underline"
+      >
+        Token expired – paste a new one
+      </button>
+    );
+  }
+
+  return (
+    <span
+      className={`text-xs font-medium ${
+        left < EXPIRING_SOON_MS ? "text-amber-400" : "text-green-400"
+      }`}
+    >
+      Ready · expires in {formatTimeLeft(left)}
+    </span>
+  );
+}
 
 interface HeaderProps {
   token: string;
@@ -87,7 +128,7 @@ export function Header({
           </div>
           {token ? (
             <>
-              <span className="text-green-400 text-xs font-medium">Ready</span>
+              <TokenStatus token={token} onExpired={() => setLoginOpen(true)} />
               <button
                 type="button"
                 onClick={onLogout}
