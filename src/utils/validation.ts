@@ -61,9 +61,9 @@ export const participantMediaRefSchema = z.object({
 export const participantSchema = z
   .object({
     participantType: z.enum(["AGENT_USER", "CUSTOMER", "PARTICIPANT"]),
-    participantFrom: z.string().max(20, "Maximum 20 characters").optional(),
-    participantTo: z.string().max(20, "Maximum 20 characters").optional(),
-    participantIdentifier: z.string().min(1, "Required").max(20, "Maximum 20 characters"),
+    participantFrom: z.string().optional(),
+    participantTo: z.string().optional(),
+    participantIdentifier: z.string().min(1, "Required"),
     isLeadingAgentUser: z.boolean().optional(),
     externalIdentifier: externalIdentifierSchema.optional(),
     participantMediaReferences: z.array(participantMediaRefSchema),
