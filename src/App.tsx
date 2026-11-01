@@ -24,6 +24,19 @@ import type { CsvParseResult } from "./utils/csvParser";
 
 type View = "form" | "import" | "dashboard" | "status";
 
+/** The API rejects empty strings for optional fields, so drop them entirely. */
+function stripEmptyStrings<T>(value: T): T {
+  if (Array.isArray(value)) return value.map(stripEmptyStrings) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([, v]) => v !== "")
+        .map(([k, v]) => [k, stripEmptyStrings(v)])
+    ) as T;
+  }
+  return value;
+}
+
 export default function App() {
   const { token, setToken, clearToken, rememberLogin } = useAuth();
   const { env, setEnv } = useEnvironment();
@@ -70,7 +83,7 @@ export default function App() {
       const manifest = {
         schemaVersion: "1.0" as const,
         uploadUrlValidityMinutes: values.uploadUrlValidityMinutes,
-        interactions: values.interactions,
+        interactions: stripEmptyStrings(values.interactions),
       };
       const zip = await buildManifestZip(manifest);
       const response = await createJob(token, zip);
@@ -179,7 +192,7 @@ export default function App() {
               <JobForm
                 onSubmit={handleFormSubmit}
                 submitting={submitting}
-                onMockBlobs={setMockBlobMap}
+                onMockBlobs={(blobs) => setMockBlobMap((prev) => new Map([...prev, ...blobs]))}
               />
             </FormProvider>
           </>

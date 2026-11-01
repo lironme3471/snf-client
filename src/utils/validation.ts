@@ -72,8 +72,8 @@ export const participantSchema = z
     if (val.participantType === "AGENT_USER" && !val.externalIdentifier) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "External identifier required for AGENT_USER", path: ["externalIdentifier"] });
     }
-    if (val.participantFrom && val.participantTo) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Provide only one: participantFrom or participantTo", path: ["participantFrom"] });
+    if (!!val.participantFrom === !!val.participantTo) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "Provide exactly one: participantFrom or participantTo", path: ["participantFrom"] });
     }
     if (val.participantType !== "AGENT_USER" && val.isLeadingAgentUser) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: "isLeadingAgentUser only allowed for AGENT_USER", path: ["isLeadingAgentUser"] });

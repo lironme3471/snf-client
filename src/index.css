@@ -16,3 +16,10 @@
     @apply text-red-500 text-xs mt-0.5;
   }
 }
+
+@layer components {
+  .required::after {
+    content: " *";
+    @apply text-red-500;
+  }
+}

@@ -56,6 +56,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/login-api\/test/, ''),
       },
+      '/login-api/staging': {
+        target: 'https://na1.staging.nice-incontact.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/login-api\/staging/, ''),
+      },
       '/login-api/prod': {
         target: 'https://na1.nice-incontact.com',
         changeOrigin: true,
@@ -65,6 +70,11 @@ export default defineConfig(({ mode }) => ({
         target: 'https://api-na1.test.niceincontact.com',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/nice-api\/test/, ''),
+      },
+      '/nice-api/staging': {
+        target: 'https://api-na1.staging.niceincontact.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/nice-api\/staging/, ''),
       },
       '/nice-api/prod': {
         target: 'https://api-na1.niceincontact.com',

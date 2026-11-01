@@ -7,6 +7,7 @@ import type { AgentConfig } from "./MockConfigDialog";
 import { ParticipantForm } from "./ParticipantForm";
 import { MediaForm } from "./MediaForm";
 import { BusinessDataForm } from "./BusinessDataForm";
+import { toDatetimeLocal, fromDatetimeLocal } from "../../utils/datetime";
 
 const CHANNEL_TYPES = [
   "PHONE_CALL",
@@ -26,16 +27,6 @@ const CHANNEL_TYPES = [
   "MICROSOFT_TEAMS",
 ] as const;
 
-function toDatetimeLocal(iso?: string): string {
-  if (!iso) return "";
-  // strip seconds fractions for datetime-local input compatibility
-  return iso.slice(0, 19);
-}
-
-function fromDatetimeLocal(v: string): string {
-  return v ? new Date(v).toISOString() : "";
-}
-
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
@@ -45,7 +36,25 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function InteractionForm({ index, isMock }: { index: number; isMock?: boolean }) {
+function collectErrors(node: unknown, out: string[] = []): string[] {
+  if (!node || typeof node !== "object") return out;
+  const n = node as { message?: unknown; [k: string]: unknown };
+  if (typeof n.message === "string") out.push(n.message);
+  for (const [k, v] of Object.entries(n)) {
+    if (k !== "ref" && k !== "message" && k !== "type") collectErrors(v, out);
+  }
+  return out;
+}
+
+export function InteractionForm({
+  index,
+  isMock,
+  onMediaBlob,
+}: {
+  index: number;
+  isMock?: boolean;
+  onMediaBlob: (mediaId: string, blob: Blob) => void;
+}) {
   const [expanded, setExpanded] = useState(true);
   const {
     register,
@@ -55,6 +64,10 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
   } = useFormContext<ManifestFormValues>();
 
   const iErr = errors?.interactions?.[index];
+  // reveal a collapsed interaction when it has validation errors
+  useEffect(() => {
+    if (iErr) setExpanded(true);
+  }, [iErr]);
   const values = isMock ? watch(`interactions.${index}`) : null;
 
   return (
@@ -76,6 +89,11 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
           <p className="text-xs text-slate-500 italic">
             Read-only sample — submit as-is or remove and add your own.
           </p>
+          {iErr && (
+            <ul className="err list-disc pl-4">
+              {collectErrors(iErr).map((m, i) => <li key={i}>{m}</li>)}
+            </ul>
+          )}
           <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-xs">
             <Field label="Channel" value={values.channelType} />
             <Field label="Direction" value={values.direction} />
@@ -131,30 +149,36 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
 
       {expanded && !isMock && (
         <div className="p-4 space-y-4">
+          <p className="text-xs text-slate-500">
+            Fields marked <span className="text-red-500">*</span> are required. Voice calls need a leading agent,
+            a customer and one AUDIO media item linked to both.
+          </p>
           {/* Core fields */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="label">External interaction ID</label>
+              <label className="label required">External interaction ID</label>
               <input
                 {...register(`interactions.${index}.externalInteractionId`)}
                 className="input"
               />
+              <p className="text-[11px] text-slate-400 mt-0.5">Unique ID of this single call leg, e.g. your call or recording ID.</p>
               {iErr?.externalInteractionId && (
                 <p className="err">{iErr.externalInteractionId.message}</p>
               )}
             </div>
             <div>
-              <label className="label">External contact ID</label>
+              <label className="label required">External contact ID</label>
               <input
                 {...register(`interactions.${index}.externalContactId`)}
                 className="input"
               />
+              <p className="text-[11px] text-slate-400 mt-0.5">Contact ID from your source system. Reuse it across legs of one contact (e.g. after a transfer); use the interaction ID if there is only one leg.</p>
               {iErr?.externalContactId && (
                 <p className="err">{iErr.externalContactId.message}</p>
               )}
             </div>
             <div>
-              <label className="label">Channel type</label>
+              <label className="label required">Channel type</label>
               <select
                 {...register(`interactions.${index}.channelType`)}
                 className="input"
@@ -167,7 +191,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
               </select>
             </div>
             <div>
-              <label className="label">Direction</label>
+              <label className="label required">Direction</label>
               <select
                 {...register(`interactions.${index}.direction`)}
                 className="input"
@@ -178,7 +202,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
               </select>
             </div>
             <div>
-              <label className="label">Start time</label>
+              <label className="label required">Start time</label>
               <Controller
                 control={control}
                 name={`interactions.${index}.startTime`}
@@ -197,7 +221,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
               )}
             </div>
             <div>
-              <label className="label">End time</label>
+              <label className="label required">End time</label>
               <Controller
                 control={control}
                 name={`interactions.${index}.endTime`}
@@ -214,7 +238,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
               {iErr?.endTime && <p className="err">{iErr.endTime.message}</p>}
             </div>
             <div>
-              <label className="label">Contact start time</label>
+              <label className="label required">Contact start time</label>
               <Controller
                 control={control}
                 name={`interactions.${index}.externalContactStartTime`}
@@ -228,6 +252,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
                   />
                 )}
               />
+              <p className="text-[11px] text-slate-400 mt-0.5">When the whole contact began. Equals start time for a single-leg call.</p>
               {iErr?.externalContactStartTime && (
                 <p className="err">{iErr.externalContactStartTime.message}</p>
               )}
@@ -276,7 +301,7 @@ export function InteractionForm({ index, isMock }: { index: number; isMock?: boo
           <hr />
           <ParticipantForm interactionIndex={index} />
           <hr />
-          <MediaForm interactionIndex={index} />
+          <MediaForm interactionIndex={index} onMediaBlob={onMediaBlob} />
           <hr />
           <BusinessDataForm interactionIndex={index} />
         </div>
@@ -343,29 +368,45 @@ export function JobForm({
     return () => document.removeEventListener("mousedown", handleOutsideClick);
   }, []);
 
+  // Blank interaction pre-shaped for a voice call: agent + customer, one AUDIO media slot
   function addInteraction() {
+    let saved: Partial<AgentConfig> = {};
+    try {
+      saved = JSON.parse(localStorage.getItem("snf_mock_agent_config") ?? "{}");
+    } catch {
+      /* ignore */
+    }
+    const audioId = `AUDIO-${Date.now()}`;
     append({
-      externalInteractionId: "",
+      externalInteractionId: `INT-${Date.now()}`,
       channelType: "PHONE_CALL",
       direction: "INBOUND",
       startTime: "",
       endTime: "",
       externalContactId: "",
       externalContactStartTime: "",
+      hasMultipleInteractions: false,
+      isFirstInteraction: true,
       participants: [
         {
           participantType: "AGENT_USER",
-          participantIdentifier: "",
+          participantIdentifier: saved.identifierValue ?? "",
           isLeadingAgentUser: true,
-          participantMediaReferences: [],
+          participantMediaReferences: [{ mediaId: audioId, streamId: 1 }],
           externalIdentifier: {
-            systemName: "",
-            identifierType: "",
-            value: "",
+            systemName: saved.systemName ?? "",
+            identifierType: saved.identifierType ?? "",
+            value: saved.identifierValue ?? "",
           },
         },
+        {
+          participantType: "CUSTOMER",
+          participantIdentifier: "",
+          isLeadingAgentUser: false,
+          participantMediaReferences: [{ mediaId: audioId, streamId: 0 }],
+        },
       ],
-      media: [],
+      media: [{ mediaId: audioId, mediaType: "AUDIO", startTime: "", endTime: "" }],
     });
   }
 
@@ -491,7 +532,11 @@ export function JobForm({
             ref={index === fields.length - 1 ? lastInteractionRef : null}
             className="relative"
           >
-            <InteractionForm index={index} isMock={mockFieldIds.has(field.id)} />
+            <InteractionForm
+              index={index}
+              isMock={mockFieldIds.has(field.id)}
+              onMediaBlob={(id, blob) => onMockBlobs(new Map([[id, blob]]))}
+            />
             <button
               type="button"
               onClick={() => remove(index)}

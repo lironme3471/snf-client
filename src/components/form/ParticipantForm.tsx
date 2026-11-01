@@ -9,6 +9,60 @@ interface Props {
   interactionIndex: number;
 }
 
+function MediaRefs({
+  interactionIndex,
+  participantIndex,
+}: {
+  interactionIndex: number;
+  participantIndex: number;
+}) {
+  const { register, control, watch } = useFormContext<ManifestFormValues>();
+  const base = `interactions.${interactionIndex}.participants.${participantIndex}.participantMediaReferences` as const;
+  const { fields, append, remove } = useFieldArray({ control, name: base });
+  const media = watch(`interactions.${interactionIndex}.media`) ?? [];
+
+  return (
+    <div className="border-t pt-2 space-y-1">
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-medium text-slate-600">Media references (optional)</p>
+        <button
+          type="button"
+          onClick={() => append({ mediaId: media[0]?.mediaId ?? "", streamId: 0 })}
+          disabled={media.length === 0}
+          title={media.length === 0 ? "Add media first" : undefined}
+          className="text-xs bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded disabled:opacity-50"
+        >
+          + Link media
+        </button>
+      </div>
+      {fields.map((f, ri) => (
+        <div key={f.id} className="flex items-center gap-2">
+          <select {...register(`${base}.${ri}.mediaId`)} className="input flex-1">
+            {media.map((m, i) => (
+              <option key={i} value={m.mediaId}>
+                {m.mediaType} — {m.mediaId}
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            {...register(`${base}.${ri}.streamId`)}
+            className="input w-24"
+            placeholder="stream"
+            title="Stream ID: which audio channel belongs to this participant"
+          />
+          <button type="button" onClick={() => remove(ri)} className="text-red-400 hover:text-red-600 text-xs">
+            ✕
+          </button>
+        </div>
+      ))}
+      {fields.length > 0 && (
+        <p className="text-[11px] text-slate-400">Stream ID separates participants on the same recording (e.g. agent 1, customer 0).</p>
+      )}
+    </div>
+  );
+}
+
 export function ParticipantForm({ interactionIndex }: Props) {
   const {
     register,
@@ -71,7 +125,7 @@ export function ParticipantForm({ interactionIndex }: Props) {
 
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <label className="label">Type</label>
+                <label className="label required">Type</label>
                 <select {...register(`${pBase}.participantType`)} className="input">
                   <option value="AGENT_USER">AGENT_USER</option>
                   <option value="CUSTOMER">CUSTOMER</option>
@@ -79,23 +133,24 @@ export function ParticipantForm({ interactionIndex }: Props) {
                 </select>
               </div>
               <div>
-                <label className="label">Identifier</label>
+                <label className="label required">Identifier</label>
                 <input
                   {...register(`${pBase}.participantIdentifier`)}
                   className="input"
-                  placeholder="e.g. agent@company.com"
+                  placeholder="agent ID/email, or customer phone number"
                 />
                 {pErr?.participantIdentifier && (
                   <p className="err">{pErr.participantIdentifier.message}</p>
                 )}
               </div>
               <div>
-                <label className="label">From</label>
-                <input {...register(`${pBase}.participantFrom`)} className="input" placeholder="optional" />
+                <label className="label">From <span className="text-slate-400 font-normal">(From or To required)</span></label>
+                <input {...register(`${pBase}.participantFrom`)} className="input" placeholder="caller number" />
+                {pErr?.participantFrom && <p className="err">{pErr.participantFrom.message}</p>}
               </div>
               <div>
-                <label className="label">To</label>
-                <input {...register(`${pBase}.participantTo`)} className="input" placeholder="optional" />
+                <label className="label">To <span className="text-slate-400 font-normal">(exactly one)</span></label>
+                <input {...register(`${pBase}.participantTo`)} className="input" placeholder="called number" />
               </div>
             </div>
 
@@ -115,12 +170,14 @@ export function ParticipantForm({ interactionIndex }: Props) {
               )}
             />
 
+            <MediaRefs interactionIndex={interactionIndex} participantIndex={pi} />
+
             {pType === "AGENT_USER" && (
               <div className="border-t pt-2 space-y-2">
-                <p className="text-xs font-medium text-slate-600">External Identifier (required for AGENT_USER)</p>
+                <p className="text-xs font-medium text-slate-600">External identifier — must match an agent configured in CXone (required for AGENT_USER)</p>
                 <div className="grid grid-cols-3 gap-2">
                   <div>
-                    <label className="label">System name</label>
+                    <label className="label required">System name</label>
                     <input
                       {...register(`${pBase}.externalIdentifier.systemName`)}
                       className="input"
@@ -130,7 +187,7 @@ export function ParticipantForm({ interactionIndex }: Props) {
                     )}
                   </div>
                   <div>
-                    <label className="label">Identifier type</label>
+                    <label className="label required">Identifier type</label>
                     <select
                       {...register(`${pBase}.externalIdentifier.identifierType`)}
                       className="input"
@@ -142,7 +199,7 @@ export function ParticipantForm({ interactionIndex }: Props) {
                     </select>
                   </div>
                   <div>
-                    <label className="label">Value</label>
+                    <label className="label required">Value</label>
                     <input
                       {...register(`${pBase}.externalIdentifier.value`)}
                       className="input"

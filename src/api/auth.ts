@@ -13,7 +13,7 @@ export async function login(email: string, password: string): Promise<string> {
   const body = parseJson<LoginResponse | ApiError>(text);
 
   if (!res.ok) {
-    throw new ApiResponseError(res.status, toApiError(body, res.status));
+    throw new ApiResponseError(res.status, toApiError(body, res.status, text));
   }
 
   const token = extractBearerToken(body as LoginResponse);
@@ -33,11 +33,13 @@ function parseJson<T>(text: string): T | undefined {
   }
 }
 
-function toApiError(body: LoginResponse | ApiError | undefined, status: number): ApiError {
-  if (body && typeof body.message === "string") {
-    return body as ApiError;
-  }
-  return { message: `Login failed with HTTP ${status}` };
+function toApiError(body: LoginResponse | ApiError | undefined, status: number, rawText: string): ApiError {
+  const b = body as Record<string, unknown> | undefined;
+  const detail = [b?.message, b?.error_description, b?.errorMessage, b?.error, b?.error_code]
+    .find((v): v is string => typeof v === "string" && v.trim() !== "");
+  if (detail) return { ...(body as ApiError), message: `HTTP ${status}: ${detail}` };
+  const raw = rawText.trim().slice(0, 300);
+  return { message: raw ? `Login failed with HTTP ${status}: ${raw}` : `Login failed with HTTP ${status} (empty response)` };
 }
 
 function extractBearerToken(response: LoginResponse | undefined): string | null {
